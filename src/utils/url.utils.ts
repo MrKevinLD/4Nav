@@ -41,7 +41,8 @@ export function normalizeAddressInput(rawInput: string): string {
   // Looks like a domain name (no spaces, has a dot with a 2+ char TLD)
   const domainPattern = /^([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(\/.*)?$/;
   if (!trimmed.includes(' ') && domainPattern.test(trimmed)) {
-    return `https://${trimmed}`;
+    const url = `https://${trimmed}`;
+    return trimmed.includes('/') ? url : `${url}/`;
   }
 
   // Otherwise treat as a Google search
@@ -149,10 +150,10 @@ export const GRID_PRESETS: GridPreset[] = [
     name: '4x RO Classic Idle (4 Contas na Mesma Aba)',
     description: 'Abre play.roclassicidle.com.br nos 4 quadrantes simultaneamente',
     urls: {
-      q1: 'https://play.roclassicidle.com.br',
-      q2: 'https://play.roclassicidle.com.br',
-      q3: 'https://play.roclassicidle.com.br',
-      q4: 'https://play.roclassicidle.com.br',
+      q1: 'https://play.roclassicidle.com.br/',
+      q2: 'https://play.roclassicidle.com.br/',
+      q3: 'https://play.roclassicidle.com.br/',
+      q4: 'https://play.roclassicidle.com.br/',
     },
   },
   {
@@ -160,7 +161,7 @@ export const GRID_PRESETS: GridPreset[] = [
     name: 'Setup Principal (RO Idle + Google + YouTube + Livre)',
     description: 'Q1: RO Classic Idle • Q2: Google • Q3: YouTube • Q4: Speed Dial',
     urls: {
-      q1: 'https://play.roclassicidle.com.br',
+      q1: 'https://play.roclassicidle.com.br/',
       q2: 'https://www.google.com',
       q3: 'https://www.youtube.com',
       q4: 'about:blank',

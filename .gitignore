@@ -2,6 +2,7 @@
 node_modules/
 .pnp
 .pnp.js
+.vscode/
 
 # Build and Electron standalone directories
 dist/
@@ -31,6 +32,7 @@ Abrir QuadNav.bat
 
 # Android Build & Gradle
 *.apk
+!docs/*.apk
 android/.gradle/
 android/app/build/
 android/build/

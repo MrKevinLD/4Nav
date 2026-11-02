@@ -90,7 +90,7 @@ function getDefaultTabs(): BrowserTab[] {
   return [
     createBrowserTab(
       1,
-      ['https://play.roclassicidle.com.br'],
+      ['https://play.roclassicidle.com.br/'],
       'Navegador #1'
     ),
   ];

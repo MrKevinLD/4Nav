@@ -1,6 +1,6 @@
 {
   "name": "4nav-browser",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "4Nav — Navegador Desktop Multi-Sessão Otimizado para Jogos Idle e Multi-Contas",
   "main": "electron/main.cjs",
   "scripts": {

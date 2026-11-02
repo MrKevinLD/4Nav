@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Versão](https://img.shields.io/badge/versão-1.0.0-10B981?style=for-the-badge)
+![Versão](https://img.shields.io/badge/versão-1.0.1-10B981?style=for-the-badge)
 ![Electron](https://img.shields.io/badge/Electron-34.2-111317?style=for-the-badge&logo=electron)
 ![React](https://img.shields.io/badge/React-19.0-181B21?style=for-the-badge&logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.7-06B6D4?style=for-the-badge&logo=typescript)
@@ -48,21 +48,23 @@ O **4Nav** resolve tudo isso com uma interface tática em tema escuro projetada 
 
 Escolha a opção que melhor se adapta a você:
 
-* 📦 **[Baixar Instalador Oficial (`4Nav-Setup-1.0.0.exe`)](https://github.com/MrKevinLD/4Nav/releases/download/v1.0.0/4Nav-Setup-1.0.0.exe)**
+* 📦 **[Baixar Instalador Oficial (`4Nav-Setup-1.0.1.exe`)](https://github.com/MrKevinLD/4Nav/releases/download/v1.0.1/4Nav-Setup-1.0.1.exe)**
   * Instalador guiado padrão do Windows.
   * Cria atalhos na Área de Trabalho e no Menu Iniciar.
   * Permite desinstalação automática pelo Painel de Controle.
 
-* ⚡ **[Baixar Versão Portátil (`4Nav-Portable-1.0.0.exe`)](https://github.com/MrKevinLD/4Nav/releases/download/v1.0.0/4Nav-Portable-1.0.0.exe)**
+* ⚡ **[Baixar Versão Portátil (`4Nav-Portable-1.0.1.exe`)](https://github.com/MrKevinLD/4Nav/releases/download/v1.0.1/4Nav-Portable-1.0.1.exe)**
   * **Zero Instalação:** Baixe e dê dois cliques para usar imediatamente.
   * Ideal para pendrives ou quem não quer instalar programas no sistema.
   * Mantém seus logins e sessões no próprio aplicativo.
 
-* 🗜️ **[Baixar Pacote Zip (`4Nav-v1.0.0-windows-x64.zip`)](https://github.com/MrKevinLD/4Nav/releases/download/v1.0.0/4Nav-v1.0.0-windows-x64.zip)**
+* 🗜️ **[Baixar Pacote Zip (`4Nav-v1.0.1-windows-x64.zip`)](https://github.com/MrKevinLD/4Nav/releases/download/v1.0.1/4Nav-v1.0.1-windows-x64.zip)**
   * Arquivo zip com todos os binários para extração manual.
 
-* 📱 **[Android APK (Código & Guia de Build)](https://github.com/MrKevinLD/4Nav#-vers%C3%A3o-mobile-android)**
-  * Código-fonte pronto para compilação via Capacitor e Android Studio.
+* 📱 **[Baixar Android APK Oficial (`4Nav-v1.0.1.apk`)](https://mrkevinld.github.io/4Nav/4Nav-v1.0.1.apk)**
+  * Download direto do aplicativo Android pronto para instalar no smartphone ou tablet.
+  * Inclui contorno de cabeçalhos iframe para compatibilidade total com RO Classic Idle e jogos web.
+  * Disponível também na aba de [Releases do GitHub](https://github.com/MrKevinLD/4Nav/releases).
 
 ---
 
