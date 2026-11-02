@@ -16,6 +16,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -120,7 +121,10 @@ public class MainActivity extends BridgeActivity {
                         if (reqHeaders != null) {
                             for (Map.Entry<String, String> e : reqHeaders.entrySet()) {
                                 String k = e.getKey();
-                                if (!k.equalsIgnoreCase("User-Agent") && !k.equalsIgnoreCase("Host") && !k.equalsIgnoreCase("Accept-Encoding")) {
+                                if (!k.equalsIgnoreCase("User-Agent")
+                                        && !k.equalsIgnoreCase("Host")
+                                        && !k.equalsIgnoreCase("Accept-Encoding")
+                                        && !k.equalsIgnoreCase("Connection")) {
                                     conn.setRequestProperty(k, e.getValue());
                                 }
                             }
@@ -148,7 +152,7 @@ public class MainActivity extends BridgeActivity {
                             }
                         }
 
-                        // Follow redirects across protocols (e.g. http to https)
+                        // Follow redirects across protocols
                         if (code == HttpURLConnection.HTTP_MOVED_PERM || code == HttpURLConnection.HTTP_MOVED_TEMP || code == 307 || code == 308) {
                             String loc = conn.getHeaderField("Location");
                             if (loc != null) {
@@ -164,7 +168,6 @@ public class MainActivity extends BridgeActivity {
 
                     if (conn != null) {
                         int code = conn.getResponseCode();
-                        String message = conn.getResponseMessage();
                         String contentTypeHeader = conn.getContentType();
                         String mimeType = "text/html";
                         String encoding = "utf-8";
@@ -192,57 +195,50 @@ public class MainActivity extends BridgeActivity {
                         }
                         byte[] bodyBytes = bos.toByteArray();
 
-                        // Remove meta http-equiv="X-Frame-Options" if present in HTML body
-                        if (mimeType.contains("html") && bodyBytes.length > 0) {
+                        // If HTML document, inject <base> tag and frame unblock polyfill
+                        if (mimeType.toLowerCase(Locale.ROOT).contains("html") && bodyBytes.length > 0) {
                             try {
-                                String html = new String(bodyBytes, encoding);
-                                if (html.contains("X-Frame-Options") || html.contains("x-frame-options")) {
-                                    html = html.replaceAll("(?i)<meta[^>]*http-equiv=[\"']?x-frame-options[\"']?[^>]*>", "");
-                                    bodyBytes = html.getBytes(encoding);
+                                String charsetName = encoding != null && !encoding.isEmpty() ? encoding : "UTF-8";
+                                String html = new String(bodyBytes, charsetName);
+
+                                // Expunge any meta http-equiv="X-Frame-Options" or CSP
+                                html = html.replaceAll("(?i)<meta[^>]*http-equiv=[\"']?x-frame-options[\"']?[^>]*>", "");
+                                html = html.replaceAll("(?i)<meta[^>]*http-equiv=[\"']?content-security-policy[\"']?[^>]*>", "");
+
+                                String baseHref = currentUrl.endsWith("/") ? currentUrl : currentUrl + "/";
+                                String injectedHead = "<head><base href=\"" + baseHref + "\"><script>"
+                                        + "try { Object.defineProperty(window,'top',{get:function(){return window.self;}});"
+                                        + "Object.defineProperty(window,'parent',{get:function(){return window.self;}}); } catch(e){}"
+                                        + "</script>";
+
+                                if (html.contains("<head>")) {
+                                    html = html.replaceFirst("(?i)<head>", injectedHead);
+                                } else if (html.contains("<html>")) {
+                                    html = html.replaceFirst("(?i)<html>", "<html>" + injectedHead + "</head>");
+                                } else {
+                                    html = injectedHead + "</head>" + html;
                                 }
+
+                                bodyBytes = html.getBytes(StandardCharsets.UTF_8);
+                                encoding = "utf-8";
                             } catch (Exception ignored) {}
                         }
 
-                        // Strip X-Frame-Options, CSP frame-ancestors, Transfer-Encoding, Content-Encoding, Content-Length
+                        // Build clean response headers: NO X-Frame-Options, NO Content-Security-Policy, NO restrictive headers
                         Map<String, String> responseHeaders = new HashMap<>();
-                        Map<String, List<String>> headerFields = conn.getHeaderFields();
-                        if (headerFields != null) {
-                            for (Map.Entry<String, List<String>> entry : headerFields.entrySet()) {
-                                String key = entry.getKey();
-                                if (key == null) continue;
-                                String lk = key.toLowerCase(Locale.ROOT);
-
-                                // Crucial: strip framing restrictions and stream metadata
-                                if (lk.equals("x-frame-options")
-                                        || lk.equals("transfer-encoding")
-                                        || lk.equals("content-encoding")
-                                        || lk.equals("content-length")) {
-                                    continue;
-                                }
-
-                                if (lk.equals("content-security-policy") || lk.equals("content-security-policy-report-only")) {
-                                    StringBuilder sb = new StringBuilder();
-                                    for (String val : entry.getValue()) {
-                                        String cleaned = val.replaceAll("(?i)frame-ancestors[^;]*;?", "");
-                                        if (sb.length() > 0) sb.append("; ");
-                                        sb.append(cleaned);
-                                    }
-                                    responseHeaders.put(key, sb.toString());
-                                } else if (!entry.getValue().isEmpty()) {
-                                    responseHeaders.put(key, entry.getValue().get(0));
-                                }
-                            }
-                        }
-
+                        responseHeaders.put("Content-Type", mimeType + "; charset=" + encoding);
                         responseHeaders.put("Access-Control-Allow-Origin", "*");
+                        responseHeaders.put("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+                        responseHeaders.put("Access-Control-Allow-Headers", "*");
+                        responseHeaders.put("Cache-Control", "no-cache");
 
-                        Log.d(TAG, "Intercepted and unblocked frame: " + uri + " (code: " + code + ", bytes: " + bodyBytes.length + ")");
+                        Log.d(TAG, "Successfully intercepted and unblocked frame: " + uri);
 
                         return new WebResourceResponse(
                             mimeType,
                             encoding,
-                            code,
-                            message != null ? message : "OK",
+                            200,
+                            "OK",
                             responseHeaders,
                             new ByteArrayInputStream(bodyBytes)
                         );

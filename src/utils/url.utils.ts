@@ -92,7 +92,7 @@ export function isKnownFrameRestrictedDomain(url: string): boolean {
 export const QUICK_BOOKMARKS: QuickBookmark[] = [
   {
     title: 'RO Classic Idle',
-    url: 'https://play.roclassicidle.com.br',
+    url: 'https://play.roclassicidle.com.br/',
     category: 'Game • Multi-Conta',
     badgeColor: '#10B981',
   },

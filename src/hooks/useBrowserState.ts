@@ -48,7 +48,7 @@ export function createBrowserTab(
   const tabId = generateUniqueId('tab');
   const sessionId = generateUniqueId(`session-${sessionNumber}`);
 
-  let paneUrls: string[] = ['https://play.roclassicidle.com.br'];
+  let paneUrls: string[] = ['https://play.roclassicidle.com.br/'];
   if (Array.isArray(initialUrls) && initialUrls.length > 0) {
     paneUrls = initialUrls;
   } else if (initialUrls && typeof initialUrls === 'object') {
