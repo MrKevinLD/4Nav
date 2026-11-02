@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Capacitor } from '@capacitor/core';
 import {
   ArrowLeft,
   ArrowRight,
@@ -243,7 +244,7 @@ export const PaneToolbar: React.FC<PaneToolbarProps> = ({
         </button>
 
         {/* Toggle X-Frame-Options Bypass Proxy (only needed in Web Preview mode) */}
-        {!isElectron && (
+        {!isElectron && !Capacitor.isNativePlatform() && (
           <button
             type="button"
             onClick={(e) => {

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
 import {
   WarningOctagon,
   PlugsConnected,
@@ -70,6 +71,9 @@ export const QuadrantPane: React.FC<QuadrantPaneProps> = ({
   onClosePane,
 }) => {
   const isElectron = Boolean(typeof window !== 'undefined' && window.electronAPI?.isElectron);
+  const isNative = Capacitor.isNativePlatform();
+  const isUnrestrictedRuntime = isElectron || isNative;
+
   const webviewRef = useRef<ElectronWebviewElement | null>(null);
   const [nativeCanBack, setNativeCanBack] = useState(false);
   const [nativeCanForward, setNativeCanForward] = useState(false);
@@ -89,9 +93,9 @@ export const QuadrantPane: React.FC<QuadrantPaneProps> = ({
     setDismissedWarning(false);
   }, [pane.url, pane.reloadCounter]);
 
-  // In Web Browser mode (non-Electron), inspect if target URL blocks framing via X-Frame-Options / CSP
+  // In Web Browser mode (non-Electron and non-Native Android), inspect if target URL blocks framing via X-Frame-Options / CSP
   useEffect(() => {
-    if (isElectron) return;
+    if (isUnrestrictedRuntime) return;
     if (!pane.url || pane.url === 'about:blank' || pane.useProxy) {
       onUpdatePane((p) => (p.frameBlockedReason ? { ...p, frameBlockedReason: null } : p));
       return;
@@ -291,14 +295,15 @@ export const QuadrantPane: React.FC<QuadrantPaneProps> = ({
   const isBlank = !pane.url || pane.url === 'about:blank';
 
   // Compute effective iframe src when running in Web Browser mode
-  const iframeSrc = pane.useProxy
-    ? `/api/proxy?session=${encodeURIComponent(effectiveSessionKey)}&url=${encodeURIComponent(
-        pane.url
-      )}`
-    : pane.url;
+  const iframeSrc =
+    !isUnrestrictedRuntime && pane.useProxy
+      ? `/api/proxy?session=${encodeURIComponent(effectiveSessionKey)}&url=${encodeURIComponent(
+          pane.url
+        )}`
+      : pane.url;
 
   const showXfoBanner =
-    !isElectron && !isBlank && Boolean(pane.frameBlockedReason) && !pane.useProxy && !dismissedWarning;
+    !isUnrestrictedRuntime && !isBlank && Boolean(pane.frameBlockedReason) && !pane.useProxy && !dismissedWarning;
 
   return (
     <section
@@ -364,7 +369,7 @@ export const QuadrantPane: React.FC<QuadrantPaneProps> = ({
             containerColor={containerColor}
             isolateSubPane={pane.isolateSubPane}
             onNavigate={(targetUrl, enableProxy) => {
-              if (enableProxy && !isElectron) {
+              if (enableProxy && !isUnrestrictedRuntime) {
                 onUpdatePane((p) => ({ ...p, useProxy: true }));
               }
               onNavigate(targetUrl);
@@ -390,15 +395,23 @@ export const QuadrantPane: React.FC<QuadrantPaneProps> = ({
             key={`${effectiveSessionKey}-${pane.useProxy ? 'proxy' : 'direct'}-${pane.reloadCounter}`}
             src={iframeSrc}
             title={`Quadrante ${pane.quadrantNumber} (${pane.title})`}
-            onLoad={() => onUpdatePane((p) => ({ ...p, isLoading: false }))}
-            onError={() =>
-              onUpdatePane((p) => ({
-                ...p,
-                isLoading: false,
-                frameBlockedReason: 'Recusado pelo servidor remoto (X-Frame-Options)',
-              }))
+            onLoad={() => onUpdatePane((p) => ({ ...p, isLoading: false, frameBlockedReason: null }))}
+            onError={() => {
+              if (!isUnrestrictedRuntime) {
+                onUpdatePane((p) => ({
+                  ...p,
+                  isLoading: false,
+                  frameBlockedReason: 'Recusado pelo servidor remoto (X-Frame-Options)',
+                }));
+              } else {
+                onUpdatePane((p) => ({ ...p, isLoading: false }));
+              }
+            }}
+            sandbox={
+              isUnrestrictedRuntime
+                ? undefined
+                : 'allow-same-origin allow-scripts allow-forms allow-popups allow-modals allow-presentation'
             }
-            sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals allow-presentation"
             referrerPolicy="no-referrer"
             className="w-full h-full border-0 bg-white"
           />
