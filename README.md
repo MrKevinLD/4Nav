@@ -6,7 +6,8 @@
 ![Electron](https://img.shields.io/badge/Electron-34.2-111317?style=for-the-badge&logo=electron)
 ![React](https://img.shields.io/badge/React-19.0-181B21?style=for-the-badge&logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.7-06B6D4?style=for-the-badge&logo=typescript)
-![Plataforma](https://img.shields.io/badge/Plataforma-Windows_10_%2F_11-10B981?style=for-the-badge&logo=windows)
+![Plataforma](https://img.shields.io/badge/Plataforma-Windows_%26_Android-10B981?style=for-the-badge&logo=windows)
+![Android](https://img.shields.io/badge/Android-APK-3DDC84?style=for-the-badge&logo=android&logoColor=white)
 ![Licença](https://img.shields.io/badge/licença-MIT-F59E0B?style=for-the-badge)
 
 **O navegador desktop definitivo projetado para jogadores que farmam em múltiplos jogos idle simultaneamente sem superaquecer a máquina ou sobrecarregar a CPU.**
@@ -59,6 +60,36 @@ Escolha a opção que melhor se adapta a você:
 
 * 🗜️ **[Baixar Pacote Zip (`4Nav-v1.0.0-windows-x64.zip`)](https://github.com/MrKevinLD/4Nav/releases/download/v1.0.0/4Nav-v1.0.0-windows-x64.zip)**
   * Arquivo zip com todos os binários para extração manual.
+
+* 📱 **[Android APK (Código & Guia de Build)](https://github.com/MrKevinLD/4Nav#-vers%C3%A3o-mobile-android)**
+  * Código-fonte pronto para compilação via Capacitor e Android Studio.
+
+---
+
+## 📱 Versão Mobile (Android)
+
+O **4Nav** agora conta com suporte multiplataforma para **Android** via **Capacitor**, permitindo que você continue o farm dos seus jogos idle diretamente no smartphone!
+
+### ✨ Recursos Exclusivos para Mobile:
+- **Navegação Ergonômica Inferior (*Thumb Zone*):** Barra inferior de toque com botões de tamanho acessível (≥44px) para alternar instantaneamente entre Contas/Janelas (`J1`, `J2`, `J3`...).
+- **Modo Dual Split Vertical:** Em modo retrato (em pé), ative o botão **Dual** para dividir a tela ao meio e monitorar 2 jogos ou contas simultâneas.
+- **Grade Tática em Modo Paisagem:** Vire o celular na horizontal para ter uma visão ampla de todas as suas contas em grade.
+- **Acesso Rápido a Configurações:** Ajuste zoom, modo leve e atalhos com 1 toque no celular.
+
+### 🛠️ Como Gerar o APK Localmente:
+
+```bash
+# 1. Compile os arquivos web e sincronize com a pasta android/
+npm run mobile:sync
+
+# 2. Abra o projeto nativo no Android Studio
+npm run mobile:open
+```
+
+No **Android Studio**:
+1. Aguarde o Gradle sincronizar os arquivos.
+2. No menu superior, clique em **Build** > **Build Bundle(s) / APK(s)** > **Build APK(s)**.
+3. Ao finalizar, o Android Studio mostrará uma notificação com o botão **locate** abrindo a pasta com seu arquivo `app-debug.apk` pronto para instalar no smartphone!
 
 ### Opção 2: Compilar a partir do Código-Fonte
 Certifique-se de ter o [Node.js](https://nodejs.org/) (versão 18+) instalado:

@@ -12,7 +12,10 @@
     "dist:installer": "npm run build && electron-builder --win nsis",
     "dist:portable": "npm run build && electron-builder --win portable",
     "desktop": "powershell -NoProfile -Command \"$env:ELECTRON_RUN_AS_NODE=$null; $env:CHROME_CRASHPAD_PIPE_NAME=$null; npm run build; node scripts/build-desktop.mjs\"",
-    "electron:start": "powershell -NoProfile -Command \"$env:ELECTRON_RUN_AS_NODE=$null; $env:CHROME_CRASHPAD_PIPE_NAME=$null; & '.\\4Nav-App\\4Nav.exe'\""
+    "electron:start": "powershell -NoProfile -Command \"$env:ELECTRON_RUN_AS_NODE=$null; $env:CHROME_CRASHPAD_PIPE_NAME=$null; & '.\\4Nav-App\\4Nav.exe'\"",
+    "mobile:sync": "npm run build && npx cap sync android",
+    "mobile:open": "npx cap open android",
+    "mobile:run": "npx cap run android"
   },
   "build": {
     "appId": "com.mrkevinld.4nav",
@@ -29,11 +32,15 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ]
     },
@@ -50,11 +57,15 @@
     }
   },
   "dependencies": {
+    "@capacitor/android": "^8.6.0",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/core": "^8.6.0",
     "@phosphor-icons/react": "^2.1.7",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.6.0",
     "@tailwindcss/vite": "^4.0.9",
     "@types/node": "^22.13.5",
     "@types/react": "^19.0.10",

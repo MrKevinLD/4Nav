@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useBrowserState } from './hooks/useBrowserState';
 import { useSettings } from './hooks/useSettings';
+import { useMobileView } from './hooks/useMobileView';
 import { TabBar } from './components/TabBar';
 import { QuadGrid } from './components/QuadGrid';
+import { MobileBottomNav } from './components/MobileBottomNav';
 import { SettingsModal } from './components/SettingsModal';
 
 export const App: React.FC = () => {
@@ -37,6 +39,8 @@ export const App: React.FC = () => {
     resetSettings,
   } = useSettings();
 
+  const { isMobile, isPortrait } = useMobileView();
+  const [isDualSplit, setIsDualSplit] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // Global keyboard shortcuts (Ctrl+T, Ctrl+W, Escape, and Configurable Window Maximization Shortcuts)
@@ -107,6 +111,8 @@ export const App: React.FC = () => {
 
   if (!currentTab) return null;
 
+  const showMobileBottomBar = isMobile && isPortrait;
+
   return (
     <div className="w-screen h-[100dvh] bg-[#090A0C] text-[#F3F4F6] flex flex-col overflow-hidden">
       <TabBar
@@ -130,7 +136,11 @@ export const App: React.FC = () => {
       />
 
       {/* Main Grid Viewport for Active Tab */}
-      <div className="relative flex-1 w-full h-[calc(100dvh-42px)] overflow-hidden">
+      <div
+        className={`relative flex-1 w-full overflow-hidden ${
+          showMobileBottomBar ? 'h-[calc(100dvh-42px-56px)]' : 'h-[calc(100dvh-42px)]'
+        }`}
+      >
         {tabs.map((tab) => {
           const isCurrent = tab.id === currentTab.id;
           return (
@@ -162,6 +172,29 @@ export const App: React.FC = () => {
           );
         })}
       </div>
+
+      {/* Mobile Bottom Navigation Bar in Portrait mode */}
+      {showMobileBottomBar && (
+        <MobileBottomNav
+          tab={currentTab}
+          activePaneId={currentTab.activePane}
+          isDualSplit={isDualSplit}
+          onSelectPane={(paneId) => {
+            setActivePane(currentTab.id, paneId);
+            if (!isDualSplit) {
+              toggleMaximizePane(currentTab.id, paneId);
+            }
+          }}
+          onAddPane={() => addPane(currentTab.id, settings.defaultNewPaneUrl)}
+          onToggleDualSplit={() => {
+            setIsDualSplit((prev) => !prev);
+            if (currentTab.maximizedPane) {
+              toggleMaximizePane(currentTab.id, currentTab.maximizedPane);
+            }
+          }}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+        />
+      )}
 
       {/* Settings Modal */}
       <SettingsModal

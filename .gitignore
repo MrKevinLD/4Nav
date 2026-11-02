@@ -29,3 +29,16 @@ Thumbs.db
 Abrir 4Nav.bat
 Abrir QuadNav.bat
 
+# Android Build & Gradle
+android/.gradle/
+android/app/build/
+android/build/
+android/local.properties
+android/.idea/
+android/*.iml
+android/app/*.iml
+android/captures/
+.externalNativeBuild/
+.cxx/
+
+
