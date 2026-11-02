@@ -117,3 +117,4 @@ Para ativá-lo no seu fork ou repositório:
 ## 📄 Licença
 
 Distribuído sob a licença **MIT**. Consulte `LICENSE` para mais detalhes.
+
