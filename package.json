@@ -1,0 +1,32 @@
+{
+  "name": "4nav-browser",
+  "version": "1.0.0",
+  "description": "4Nav — Navegador Desktop Multi-Sessão Otimizado para Jogos Idle e Multi-Contas",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "vite --port 3000",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --port 3000",
+    "lint": "tsc --noEmit",
+    "desktop": "powershell -NoProfile -Command \"$env:ELECTRON_RUN_AS_NODE=$null; $env:CHROME_CRASHPAD_PIPE_NAME=$null; npm run build; node scripts/build-desktop.mjs\"",
+    "electron:start": "powershell -NoProfile -Command \"$env:ELECTRON_RUN_AS_NODE=$null; $env:CHROME_CRASHPAD_PIPE_NAME=$null; & '.\\4Nav-App\\4Nav.exe'\""
+  },
+  "dependencies": {
+    "@phosphor-icons/react": "^2.1.7",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.0.9",
+    "@types/node": "^22.13.5",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.2",
+    "electron": "^34.2.0",
+    "tailwindcss": "^4.0.9",
+    "typescript": "^5.7.3",
+    "vite": "^6.2.0",
+    "wait-on": "^8.0.2"
+  }
+}
