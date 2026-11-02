@@ -45,10 +45,20 @@ O **4Nav** resolve tudo isso com uma interface tática em tema escuro projetada 
 
 ## 📥 Download & Instalação
 
-### Opção 1: Baixar a Versão Compilada Pronta (Recomendado)
-1. Acesse a aba de **[Releases](../../releases)** deste repositório.
-2. Baixe o pacote compactado `.zip` ou o executável `4Nav.exe`.
-3. Extraia em qualquer pasta e dê um duplo clique em `4Nav.exe` (ou `Abrir 4Nav.bat`).
+Escolha a opção que melhor se adapta a você:
+
+* 📦 **[Baixar Instalador Oficial (`4Nav-Setup-1.0.0.exe`)](https://github.com/MrKevinLD/4Nav/releases/download/v1.0.0/4Nav-Setup-1.0.0.exe)**
+  * Instalador guiado padrão do Windows.
+  * Cria atalhos na Área de Trabalho e no Menu Iniciar.
+  * Permite desinstalação automática pelo Painel de Controle.
+
+* ⚡ **[Baixar Versão Portátil (`4Nav-Portable-1.0.0.exe`)](https://github.com/MrKevinLD/4Nav/releases/download/v1.0.0/4Nav-Portable-1.0.0.exe)**
+  * **Zero Instalação:** Baixe e dê dois cliques para usar imediatamente.
+  * Ideal para pendrives ou quem não quer instalar programas no sistema.
+  * Mantém seus logins e sessões no próprio aplicativo.
+
+* 🗜️ **[Baixar Pacote Zip (`4Nav-v1.0.0-windows-x64.zip`)](https://github.com/MrKevinLD/4Nav/releases/download/v1.0.0/4Nav-v1.0.0-windows-x64.zip)**
+  * Arquivo zip com todos os binários para extração manual.
 
 ### Opção 2: Compilar a partir do Código-Fonte
 Certifique-se de ter o [Node.js](https://nodejs.org/) (versão 18+) instalado:

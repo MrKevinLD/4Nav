@@ -5,6 +5,7 @@ node_modules/
 
 # Build and Electron standalone directories
 dist/
+release-dist/
 4Nav-App/
 QuadNav-App/
 

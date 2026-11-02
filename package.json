@@ -8,8 +8,46 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --port 3000",
     "lint": "tsc --noEmit",
+    "dist": "npm run build && electron-builder --win nsis portable",
+    "dist:installer": "npm run build && electron-builder --win nsis",
+    "dist:portable": "npm run build && electron-builder --win portable",
     "desktop": "powershell -NoProfile -Command \"$env:ELECTRON_RUN_AS_NODE=$null; $env:CHROME_CRASHPAD_PIPE_NAME=$null; npm run build; node scripts/build-desktop.mjs\"",
     "electron:start": "powershell -NoProfile -Command \"$env:ELECTRON_RUN_AS_NODE=$null; $env:CHROME_CRASHPAD_PIPE_NAME=$null; & '.\\4Nav-App\\4Nav.exe'\""
+  },
+  "build": {
+    "appId": "com.mrkevinld.4nav",
+    "productName": "4Nav",
+    "directories": {
+      "output": "release-dist"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "4Nav",
+      "artifactName": "4Nav-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "4Nav-Portable-${version}.${ext}"
+    }
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.7",
@@ -24,6 +62,7 @@
     "@vitejs/plugin-react": "^4.3.4",
     "concurrently": "^9.1.2",
     "electron": "^34.2.0",
+    "electron-builder": "^26.18.0",
     "tailwindcss": "^4.0.9",
     "typescript": "^5.7.3",
     "vite": "^6.2.0",
