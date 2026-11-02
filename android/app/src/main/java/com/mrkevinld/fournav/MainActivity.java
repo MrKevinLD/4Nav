@@ -2,6 +2,7 @@ package com.mrkevinld.fournav;
 
 import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
 import android.webkit.CookieManager;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
@@ -10,14 +11,19 @@ import android.webkit.WebView;
 import com.getcapacitor.Bridge;
 import com.getcapacitor.BridgeActivity;
 import com.getcapacitor.BridgeWebViewClient;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public class MainActivity extends BridgeActivity {
+
+    private static final String TAG = "4Nav";
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -58,6 +64,19 @@ public class MainActivity extends BridgeActivity {
             return false;
         }
 
+        private boolean isStaticAsset(Uri uri) {
+            String path = uri.getPath();
+            if (path == null) return false;
+            String lower = path.toLowerCase(Locale.ROOT);
+            return lower.endsWith(".js") || lower.endsWith(".mjs")
+                    || lower.endsWith(".css")
+                    || lower.endsWith(".png") || lower.endsWith(".jpg") || lower.endsWith(".jpeg")
+                    || lower.endsWith(".gif") || lower.endsWith(".webp") || lower.endsWith(".svg") || lower.endsWith(".ico")
+                    || lower.endsWith(".woff") || lower.endsWith(".woff2") || lower.endsWith(".ttf") || lower.endsWith(".otf")
+                    || lower.endsWith(".mp3") || lower.endsWith(".wav") || lower.endsWith(".ogg") || lower.endsWith(".mp4")
+                    || lower.endsWith(".wasm") || lower.endsWith(".json") || lower.endsWith(".map");
+        }
+
         @Override
         public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
             Uri uri = request.getUrl();
@@ -73,140 +92,164 @@ public class MainActivity extends BridgeActivity {
                 return super.shouldInterceptRequest(view, request);
             }
 
-            // Intercept external HTTP/HTTPS GET requests that could be framed documents (with X-Frame-Options)
+            // Only intercept external HTTP/HTTPS GET requests that are HTML documents/pages
             String method = request.getMethod();
             if ("GET".equalsIgnoreCase(method) && scheme != null && (scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https"))) {
-                Map<String, String> reqHeaders = request.getRequestHeaders();
-                String accept = reqHeaders != null ? reqHeaders.get("Accept") : null;
-                String secFetchDest = reqHeaders != null ? reqHeaders.get("Sec-Fetch-Dest") : null;
-                String secFetchMode = reqHeaders != null ? reqHeaders.get("Sec-Fetch-Mode") : null;
+                
+                // Let Chromium handle static assets directly for full performance
+                if (isStaticAsset(uri)) {
+                    return super.shouldInterceptRequest(view, request);
+                }
 
-                boolean isFrameOrDoc = (secFetchDest != null && (secFetchDest.equals("iframe") || secFetchDest.equals("frame") || secFetchDest.equals("document")))
-                        || (secFetchMode != null && secFetchMode.equals("navigate"))
-                        || (accept != null && accept.contains("text/html"));
+                try {
+                    String currentUrl = uri.toString();
+                    HttpURLConnection conn = null;
+                    int redirects = 0;
 
-                if (isFrameOrDoc) {
-                    try {
-                        String currentUrl = uri.toString();
-                        HttpURLConnection conn = null;
-                        int redirects = 0;
+                    while (redirects < 6) {
+                        URL target = new URL(currentUrl);
+                        conn = (HttpURLConnection) target.openConnection();
+                        conn.setRequestMethod("GET");
+                        conn.setInstanceFollowRedirects(false);
+                        conn.setConnectTimeout(10000);
+                        conn.setReadTimeout(15000);
 
-                        while (redirects < 6) {
-                            URL target = new URL(currentUrl);
-                            conn = (HttpURLConnection) target.openConnection();
-                            conn.setRequestMethod("GET");
-                            conn.setInstanceFollowRedirects(false);
-                            conn.setConnectTimeout(10000);
-                            conn.setReadTimeout(15000);
+                        conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Mobile Safari/537.36");
+                        
+                        Map<String, String> reqHeaders = request.getRequestHeaders();
+                        if (reqHeaders != null) {
+                            for (Map.Entry<String, String> e : reqHeaders.entrySet()) {
+                                String k = e.getKey();
+                                if (!k.equalsIgnoreCase("User-Agent") && !k.equalsIgnoreCase("Host") && !k.equalsIgnoreCase("Accept-Encoding")) {
+                                    conn.setRequestProperty(k, e.getValue());
+                                }
+                            }
+                        }
 
-                            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Mobile Safari/537.36");
-                            if (reqHeaders != null) {
-                                for (Map.Entry<String, String> e : reqHeaders.entrySet()) {
-                                    String k = e.getKey();
-                                    if (!k.equalsIgnoreCase("User-Agent") && !k.equalsIgnoreCase("Host")) {
-                                        conn.setRequestProperty(k, e.getValue());
+                        // Forward cookies from CookieManager
+                        String cookie = CookieManager.getInstance().getCookie(currentUrl);
+                        if (cookie != null && !cookie.isEmpty()) {
+                            conn.setRequestProperty("Cookie", cookie);
+                        }
+
+                        conn.connect();
+
+                        int code = conn.getResponseCode();
+
+                        // Collect Set-Cookie headers back into CookieManager
+                        Map<String, List<String>> headerFields = conn.getHeaderFields();
+                        if (headerFields != null) {
+                            for (Map.Entry<String, List<String>> entry : headerFields.entrySet()) {
+                                if ("Set-Cookie".equalsIgnoreCase(entry.getKey()) && entry.getValue() != null) {
+                                    for (String val : entry.getValue()) {
+                                        CookieManager.getInstance().setCookie(currentUrl, val);
                                     }
                                 }
                             }
+                        }
 
-                            // Forward cookies from CookieManager
-                            String cookie = CookieManager.getInstance().getCookie(currentUrl);
-                            if (cookie != null && !cookie.isEmpty()) {
-                                conn.setRequestProperty("Cookie", cookie);
+                        // Follow redirects across protocols (e.g. http to https)
+                        if (code == HttpURLConnection.HTTP_MOVED_PERM || code == HttpURLConnection.HTTP_MOVED_TEMP || code == 307 || code == 308) {
+                            String loc = conn.getHeaderField("Location");
+                            if (loc != null) {
+                                URL next = new URL(target, loc);
+                                currentUrl = next.toString();
+                                redirects++;
+                                conn.disconnect();
+                                continue;
                             }
+                        }
+                        break;
+                    }
 
-                            conn.connect();
+                    if (conn != null) {
+                        int code = conn.getResponseCode();
+                        String message = conn.getResponseMessage();
+                        String contentTypeHeader = conn.getContentType();
+                        String mimeType = "text/html";
+                        String encoding = "utf-8";
 
-                            int code = conn.getResponseCode();
-
-                            // Collect Set-Cookie headers back into CookieManager
-                            Map<String, List<String>> headerFields = conn.getHeaderFields();
-                            if (headerFields != null) {
-                                for (Map.Entry<String, List<String>> entry : headerFields.entrySet()) {
-                                    if ("Set-Cookie".equalsIgnoreCase(entry.getKey()) && entry.getValue() != null) {
-                                        for (String val : entry.getValue()) {
-                                            CookieManager.getInstance().setCookie(currentUrl, val);
-                                        }
-                                    }
+                        if (contentTypeHeader != null) {
+                            String[] parts = contentTypeHeader.split(";");
+                            mimeType = parts[0].trim();
+                            if (parts.length > 1) {
+                                String p2 = parts[1].trim().toLowerCase(Locale.ROOT);
+                                if (p2.startsWith("charset=")) {
+                                    encoding = p2.substring(8).trim();
                                 }
                             }
+                        }
 
-                            // Follow redirects across protocols (e.g. http to https)
-                            if (code == HttpURLConnection.HTTP_MOVED_PERM || code == HttpURLConnection.HTTP_MOVED_TEMP || code == 307 || code == 308) {
-                                String loc = conn.getHeaderField("Location");
-                                if (loc != null) {
-                                    URL next = new URL(target, loc);
-                                    currentUrl = next.toString();
-                                    redirects++;
-                                    conn.disconnect();
+                        // Read full body into byte array
+                        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                        InputStream in = (code >= 400) ? conn.getErrorStream() : conn.getInputStream();
+                        if (in != null) {
+                            byte[] buf = new byte[8192];
+                            int n;
+                            while ((n = in.read(buf)) != -1) {
+                                bos.write(buf, 0, n);
+                            }
+                        }
+                        byte[] bodyBytes = bos.toByteArray();
+
+                        // Remove meta http-equiv="X-Frame-Options" if present in HTML body
+                        if (mimeType.contains("html") && bodyBytes.length > 0) {
+                            try {
+                                String html = new String(bodyBytes, encoding);
+                                if (html.contains("X-Frame-Options") || html.contains("x-frame-options")) {
+                                    html = html.replaceAll("(?i)<meta[^>]*http-equiv=[\"']?x-frame-options[\"']?[^>]*>", "");
+                                    bodyBytes = html.getBytes(encoding);
+                                }
+                            } catch (Exception ignored) {}
+                        }
+
+                        // Strip X-Frame-Options, CSP frame-ancestors, Transfer-Encoding, Content-Encoding, Content-Length
+                        Map<String, String> responseHeaders = new HashMap<>();
+                        Map<String, List<String>> headerFields = conn.getHeaderFields();
+                        if (headerFields != null) {
+                            for (Map.Entry<String, List<String>> entry : headerFields.entrySet()) {
+                                String key = entry.getKey();
+                                if (key == null) continue;
+                                String lk = key.toLowerCase(Locale.ROOT);
+
+                                // Crucial: strip framing restrictions and stream metadata
+                                if (lk.equals("x-frame-options")
+                                        || lk.equals("transfer-encoding")
+                                        || lk.equals("content-encoding")
+                                        || lk.equals("content-length")) {
                                     continue;
                                 }
-                            }
-                            break;
-                        }
 
-                        if (conn != null) {
-                            int code = conn.getResponseCode();
-                            String message = conn.getResponseMessage();
-                            String contentTypeHeader = conn.getContentType();
-                            String mimeType = "text/html";
-                            String encoding = "utf-8";
-
-                            if (contentTypeHeader != null) {
-                                String[] parts = contentTypeHeader.split(";");
-                                mimeType = parts[0].trim();
-                                if (parts.length > 1) {
-                                    String p2 = parts[1].trim().toLowerCase();
-                                    if (p2.startsWith("charset=")) {
-                                        encoding = p2.substring(8).trim();
+                                if (lk.equals("content-security-policy") || lk.equals("content-security-policy-report-only")) {
+                                    StringBuilder sb = new StringBuilder();
+                                    for (String val : entry.getValue()) {
+                                        String cleaned = val.replaceAll("(?i)frame-ancestors[^;]*;?", "");
+                                        if (sb.length() > 0) sb.append("; ");
+                                        sb.append(cleaned);
                                     }
+                                    responseHeaders.put(key, sb.toString());
+                                } else if (!entry.getValue().isEmpty()) {
+                                    responseHeaders.put(key, entry.getValue().get(0));
                                 }
                             }
-
-                            // Strip X-Frame-Options and frame-ancestors from headers
-                            Map<String, String> responseHeaders = new HashMap<>();
-                            Map<String, List<String>> headerFields = conn.getHeaderFields();
-                            if (headerFields != null) {
-                                for (Map.Entry<String, List<String>> entry : headerFields.entrySet()) {
-                                    String key = entry.getKey();
-                                    if (key == null) continue;
-                                    String lk = key.toLowerCase();
-
-                                    if (lk.equals("x-frame-options")) {
-                                        // Strip!
-                                        continue;
-                                    }
-                                    if (lk.equals("content-security-policy") || lk.equals("content-security-policy-report-only")) {
-                                        StringBuilder sb = new StringBuilder();
-                                        for (String val : entry.getValue()) {
-                                            String cleaned = val.replaceAll("(?i)frame-ancestors[^;]*;?", "");
-                                            if (sb.length() > 0) sb.append("; ");
-                                            sb.append(cleaned);
-                                        }
-                                        responseHeaders.put(key, sb.toString());
-                                    } else if (!entry.getValue().isEmpty()) {
-                                        responseHeaders.put(key, entry.getValue().get(0));
-                                    }
-                                }
-                            }
-
-                            responseHeaders.put("Access-Control-Allow-Origin", "*");
-
-                            InputStream in = (code >= 400) ? conn.getErrorStream() : conn.getInputStream();
-                            if (in == null) in = conn.getInputStream();
-
-                            return new WebResourceResponse(
-                                mimeType,
-                                encoding,
-                                code,
-                                message != null ? message : "OK",
-                                responseHeaders,
-                                in
-                            );
                         }
-                    } catch (Exception ex) {
-                        return super.shouldInterceptRequest(view, request);
+
+                        responseHeaders.put("Access-Control-Allow-Origin", "*");
+
+                        Log.d(TAG, "Intercepted and unblocked frame: " + uri + " (code: " + code + ", bytes: " + bodyBytes.length + ")");
+
+                        return new WebResourceResponse(
+                            mimeType,
+                            encoding,
+                            code,
+                            message != null ? message : "OK",
+                            responseHeaders,
+                            new ByteArrayInputStream(bodyBytes)
+                        );
                     }
+                } catch (Exception ex) {
+                    Log.e(TAG, "Interception fallback for: " + uri, ex);
+                    return super.shouldInterceptRequest(view, request);
                 }
             }
 
