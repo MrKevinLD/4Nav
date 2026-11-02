@@ -412,7 +412,7 @@ export const QuadrantPane: React.FC<QuadrantPaneProps> = ({
                 ? undefined
                 : 'allow-same-origin allow-scripts allow-forms allow-popups allow-modals allow-presentation'
             }
-            referrerPolicy={isUnrestrictedRuntime ? undefined : 'no-referrer'}
+            referrerPolicy="no-referrer"
             className="w-full h-full border-0 bg-white"
           />
         )}
