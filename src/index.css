@@ -48,3 +48,12 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Mobile Eco & Battery Saver Mode */
+.mobile-eco-mode iframe {
+  filter: brightness(0.9) contrast(1.02);
+}
+
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}

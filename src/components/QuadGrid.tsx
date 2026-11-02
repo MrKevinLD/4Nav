@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { BrowserTab, PaneState } from '../types/browser.types';
+import { useMobileView } from '../hooks/useMobileView';
 import { QuadrantPane } from './QuadrantPane';
 
 interface QuadGridProps {
@@ -80,12 +81,14 @@ export const QuadGrid: React.FC<QuadGridProps> = ({
     };
   }, [dragAxis, tab.splitX, tab.splitY, onUpdateGridSplit]);
 
+  const { isMobile } = useMobileView();
+
   const renderQuadrant = (paneId: string, index: number) => {
     const pane = tab.panes[paneId];
     if (!pane) return null;
     const isMax = maximizedPane === paneId;
     const isHidden = Boolean(maximizedPane && !isMax);
-    const shortcut = maximizeShortcuts?.[index + 1];
+    const shortcut = isMobile ? undefined : maximizeShortcuts?.[index + 1];
 
     return (
       <div

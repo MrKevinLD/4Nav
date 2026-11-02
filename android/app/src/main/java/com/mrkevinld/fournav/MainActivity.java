@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.zip.GZIPInputStream;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
@@ -32,9 +33,39 @@ public class MainActivity extends BridgeActivity {
 
     private static final String TAG = "4Nav";
 
+    public class AndroidBridgeInterface {
+        @android.webkit.JavascriptInterface
+        public void setKeepScreenOn(boolean keepOn) {
+            runOnUiThread(() -> {
+                if (keepOn) {
+                    getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                    Log.d(TAG, "Screen WakeLock: ACTIVE (FLAG_KEEP_SCREEN_ON)");
+                } else {
+                    getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                    Log.d(TAG, "Screen WakeLock: RELEASED");
+                }
+            });
+        }
+
+        @android.webkit.JavascriptInterface
+        public void clearMemoryCache() {
+            runOnUiThread(() -> {
+                Bridge b = getBridge();
+                if (b != null && b.getWebView() != null) {
+                    b.getWebView().clearCache(false);
+                }
+                System.gc();
+                Log.d(TAG, "Native memory cache cleared & System.gc() called");
+            });
+        }
+    }
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // Keep screen awake by default for idle farming games
+        getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         Bridge bridge = this.getBridge();
         if (bridge != null) {
@@ -54,6 +85,9 @@ public class MainActivity extends BridgeActivity {
             settings.setMediaPlaybackRequiresUserGesture(false);
             settings.setSafeBrowsingEnabled(false);
             settings.setUserAgentString("Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Mobile Safari/537.36");
+
+            // Register native bridge for performance and screen wake lock
+            webView.addJavascriptInterface(new AndroidBridgeInterface(), "AndroidBridge");
 
             // Flush out previous error caches
             webView.clearCache(true);
@@ -232,6 +266,22 @@ public class MainActivity extends BridgeActivity {
                         }
                         byte[] bodyBytes = bos.toByteArray();
 
+                        // Automatically decompress gzip if server sent compressed bytes
+                        String contentEncoding = conn.getContentEncoding();
+                        if (bodyBytes.length >= 2 && ("gzip".equalsIgnoreCase(contentEncoding) || (bodyBytes[0] == (byte) 0x1f && bodyBytes[1] == (byte) 0x8b))) {
+                            try {
+                                GZIPInputStream gis = new GZIPInputStream(new ByteArrayInputStream(bodyBytes));
+                                ByteArrayOutputStream decompressed = new ByteArrayOutputStream();
+                                byte[] dBuf = new byte[8192];
+                                int dRead;
+                                while ((dRead = gis.read(dBuf)) != -1) {
+                                    decompressed.write(dBuf, 0, dRead);
+                                }
+                                gis.close();
+                                bodyBytes = decompressed.toByteArray();
+                            } catch (Exception ignored) {}
+                        }
+
                         // If HTML document, inject <base> tag and frame unblock polyfill
                         if (mimeType.toLowerCase(Locale.ROOT).contains("html") && bodyBytes.length > 0) {
                             try {
@@ -244,8 +294,11 @@ public class MainActivity extends BridgeActivity {
 
                                 String baseHref = currentUrl.endsWith("/") ? currentUrl : currentUrl + "/";
                                 String injectedHead = "<head><base href=\"" + baseHref + "\"><script>"
-                                        + "try { Object.defineProperty(window,'top',{get:function(){return window.self;}});"
-                                        + "Object.defineProperty(window,'parent',{get:function(){return window.self;}}); } catch(e){}"
+                                        + "try { var p=Object.getPrototypeOf(window);"
+                                        + "Object.defineProperty(p,'top',{get:function(){return window;},configurable:true});"
+                                        + "Object.defineProperty(p,'parent',{get:function(){return window;},configurable:true}); } catch(e){}"
+                                        + "try { Object.defineProperty(window,'top',{get:function(){return window;},configurable:true});"
+                                        + "Object.defineProperty(window,'parent',{get:function(){return window;},configurable:true}); } catch(e){}"
                                         + "</script>";
 
                                 if (html.contains("<head>")) {

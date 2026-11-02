@@ -10,10 +10,13 @@ import {
   GameController,
   Monitor,
   Cpu,
+  Sun,
+  DeviceMobile,
   ArrowsInSimple,
   ArrowCounterClockwise,
 } from '@phosphor-icons/react';
 import type { AppSettings } from '../types/browser.types';
+import { useMobileView } from '../hooks/useMobileView';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -38,6 +41,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onResetSettings,
   onClearRamCache,
 }) => {
+  const { isMobile } = useMobileView();
   const [activeTab, setActiveTab] = useState<SettingsTab>('performance');
   const [ramCleanedToast, setRamCleanedToast] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -162,6 +166,61 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           {/* TAB 1: OTIMIZAÇÃO & PERFORMANCE IDLE */}
           {activeTab === 'performance' && (
             <div className="space-y-4">
+              {/* Anti-Bloqueio / Manter Tela Sempre Ligada */}
+              <div className="p-3 bg-[#181B21] border border-[#232832] rounded-[2px] flex items-start justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Sun size={16} className="text-[#10B981]" weight="bold" />
+                    <span className="text-[12px] font-bold text-[#F3F4F6]">
+                      Manter Tela Sempre Ligada (Anti-Bloqueio / Wake Lock)
+                    </span>
+                    <span className="text-[9px] font-mono px-1.5 py-0.2 bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30 rounded-[2px]">
+                      Essencial Mobile
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-[#9CA3AF] leading-relaxed">
+                    Impede o celular de desligar ou bloquear a tela enquanto o 4Nav estiver aberto. Permite que seus jogos idle continuem farmando em segundo plano sem você precisar tocar na tela.
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
+                  <input
+                    type="checkbox"
+                    checked={settings.keepScreenAwake}
+                    onChange={(e) => onUpdateSetting('keepScreenAwake', e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-10 h-5 bg-[#232832] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#10B981]" />
+                </label>
+              </div>
+
+              {/* Modo Economia de Bateria Mobile */}
+              <div className="p-3 bg-[#181B21] border border-[#232832] rounded-[2px] flex items-start justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Lightning size={16} className="text-[#F59E0B]" weight="bold" />
+                    <span className="text-[12px] font-bold text-[#F3F4F6]">
+                      Modo Economia de Bateria & Temperatura
+                    </span>
+                    <span className="text-[9px] font-mono px-1.5 py-0.2 bg-[#F59E0B]/15 text-[#F59E0B] border border-[#F59E0B]/30 rounded-[2px]">
+                      Poupa Bateria
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-[#9CA3AF] leading-relaxed">
+                    Limita a taxa de quadros e reduz a intensidade de shaders gráficos. Ideal para evitar superaquecimento e estender a duração da bateria enquanto joga no smartphone.
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
+                  <input
+                    type="checkbox"
+                    checked={settings.enableEcoBatteryMode}
+                    onChange={(e) => onUpdateSetting('enableEcoBatteryMode', e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-10 h-5 bg-[#232832] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#10B981]" />
+                </label>
+              </div>
+
+              {/* Modo Ultra Leve Global */}
               <div className="p-3 bg-[#181B21] border border-[#232832] rounded-[2px] flex items-start justify-between gap-4">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
@@ -188,6 +247,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </label>
               </div>
 
+              {/* Mutar Janelas em Segundo Plano */}
               <div className="p-3 bg-[#181B21] border border-[#232832] rounded-[2px] flex items-start justify-between gap-4">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
@@ -211,6 +271,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </label>
               </div>
 
+              {/* Escala de Zoom */}
               <div className="p-3 bg-[#181B21] border border-[#232832] rounded-[2px] flex items-start justify-between gap-4">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
@@ -274,6 +335,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           {/* TAB 2: ATALHOS PARA MAXIMIZAR JANELAS */}
           {activeTab === 'shortcuts' && (
             <div className="space-y-4">
+              {isMobile && (
+                <div className="p-3 bg-[#10B981]/10 border border-[#10B981]/30 rounded-[2px] flex items-center gap-2.5 text-[#10B981]">
+                  <DeviceMobile size={22} weight="bold" className="shrink-0" />
+                  <p className="text-[11px] leading-relaxed text-[#F3F4F6]">
+                    <strong>Modo Mobile Ativo:</strong> No celular não é necessário teclado! A alternância entre contas é feita com 1 toque nos botões inferiores (<code className="text-[#10B981]">J1</code>, <code className="text-[#10B981]">J2</code>...) ou pelo modo Dual Split. Os atalhos abaixo são para uso com teclado físico (Desktop ou OTG/Bluetooth).
+                  </p>
+                </div>
+              )}
               <div className="p-3 bg-[#181B21] border border-[#232832] rounded-[2px] space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">

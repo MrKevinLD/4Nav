@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useBrowserState } from './hooks/useBrowserState';
 import { useSettings } from './hooks/useSettings';
 import { useMobileView } from './hooks/useMobileView';
+import { useWakeLock } from './hooks/useWakeLock';
 import { TabBar } from './components/TabBar';
 import { QuadGrid } from './components/QuadGrid';
 import { MobileBottomNav } from './components/MobileBottomNav';
@@ -42,6 +43,9 @@ export const App: React.FC = () => {
   const { isMobile, isPortrait } = useMobileView();
   const [isDualSplit, setIsDualSplit] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  // Keep screen awake while 4Nav is active (configurable for idle gaming)
+  useWakeLock(settings.keepScreenAwake);
 
   // Global keyboard shortcuts (Ctrl+T, Ctrl+W, Escape, and Configurable Window Maximization Shortcuts)
   useEffect(() => {
@@ -102,6 +106,14 @@ export const App: React.FC = () => {
   }, [addTab, closeTab, currentTab, tabs.length, settings.maximizeShortcuts, toggleMaximizePane]);
 
   const handleClearRamCache = useCallback(async () => {
+    // 1. Android Native WebView Cache & GC
+    if (typeof window !== 'undefined' && window.AndroidBridge?.clearMemoryCache) {
+      try {
+        window.AndroidBridge.clearMemoryCache();
+      } catch {}
+    }
+
+    // 2. Electron Desktop Session Cache
     if (typeof window !== 'undefined' && window.electronAPI?.clearSession) {
       for (const tab of tabs) {
         await window.electronAPI.clearSession(`persist:${tab.sessionId}`).catch(() => {});
@@ -114,7 +126,11 @@ export const App: React.FC = () => {
   const showMobileBottomBar = isMobile && isPortrait;
 
   return (
-    <div className="w-screen h-[100dvh] bg-[#090A0C] text-[#F3F4F6] flex flex-col overflow-hidden">
+    <div
+      className={`w-screen h-[100dvh] bg-[#090A0C] text-[#F3F4F6] flex flex-col overflow-hidden ${
+        settings.enableEcoBatteryMode ? 'mobile-eco-mode' : ''
+      }`}
+    >
       <TabBar
         tabs={tabs}
         activeTabId={activeTabId}
@@ -179,6 +195,8 @@ export const App: React.FC = () => {
           tab={currentTab}
           activePaneId={currentTab.activePane}
           isDualSplit={isDualSplit}
+          keepScreenAwake={settings.keepScreenAwake}
+          enableEcoBatteryMode={settings.enableEcoBatteryMode}
           onSelectPane={(paneId) => {
             setActivePane(currentTab.id, paneId);
             if (!isDualSplit) {
@@ -192,6 +210,13 @@ export const App: React.FC = () => {
               toggleMaximizePane(currentTab.id, currentTab.maximizedPane);
             }
           }}
+          onToggleWakeLock={() =>
+            updateSetting('keepScreenAwake', !settings.keepScreenAwake)
+          }
+          onToggleEcoMode={() =>
+            updateSetting('enableEcoBatteryMode', !settings.enableEcoBatteryMode)
+          }
+          onClearMemory={handleClearRamCache}
           onOpenSettings={() => setIsSettingsOpen(true)}
         />
       )}

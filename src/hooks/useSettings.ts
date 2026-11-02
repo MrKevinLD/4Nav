@@ -20,6 +20,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
     8: 'Alt+8',
   },
   defaultNewPaneUrl: 'about:blank',
+  keepScreenAwake: true,
+  enableEcoBatteryMode: false,
 };
 
 export function useSettings() {

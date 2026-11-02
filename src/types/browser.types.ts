@@ -70,6 +70,10 @@ export interface AppSettings {
   maximizeShortcuts: Record<number, string>;
   /** URL padrão aberta ao clicar em "+ Adicionar Janela" */
   defaultNewPaneUrl: string;
+  /** Impede o celular de bloquear ou desligar a tela durante o farm */
+  keepScreenAwake: boolean;
+  /** Modo Econômico Mobile: reduz FPS e brilho de shaders para poupar bateria */
+  enableEcoBatteryMode: boolean;
 }
 
 export interface ElectronBridgeAPI {
