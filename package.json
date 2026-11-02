@@ -14,6 +14,7 @@
     "desktop": "powershell -NoProfile -Command \"$env:ELECTRON_RUN_AS_NODE=$null; $env:CHROME_CRASHPAD_PIPE_NAME=$null; npm run build; node scripts/build-desktop.mjs\"",
     "electron:start": "powershell -NoProfile -Command \"$env:ELECTRON_RUN_AS_NODE=$null; $env:CHROME_CRASHPAD_PIPE_NAME=$null; & '.\\4Nav-App\\4Nav.exe'\"",
     "mobile:sync": "npm run build && npx cap sync android",
+    "mobile:build": "npm run mobile:sync && cd android && .\\gradlew assembleDebug",
     "mobile:open": "npx cap open android",
     "mobile:run": "npx cap run android"
   },

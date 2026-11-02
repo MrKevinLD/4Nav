@@ -40,3 +40,4 @@ export function useMobileView() {
 
   return { isMobile, isPortrait };
 }
+

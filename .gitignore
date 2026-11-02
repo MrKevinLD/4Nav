@@ -30,6 +30,7 @@ Abrir 4Nav.bat
 Abrir QuadNav.bat
 
 # Android Build & Gradle
+*.apk
 android/.gradle/
 android/app/build/
 android/build/
