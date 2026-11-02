@@ -11,7 +11,7 @@
 
 **O navegador desktop definitivo projetado para jogadores que farmam em múltiplos jogos idle simultaneamente sem superaquecer a máquina ou sobrecarregar a CPU.**
 
-[🌐 Site Oficial (GitHub Pages)](https://usuario.github.io/4Nav/) • [📥 Baixar Executável (.exe)](#-download--instalação) • [⌨️ Atalhos](#-atalhos-de-teclado)
+[🌐 Site Oficial (GitHub Pages)](https://mrkevinld.github.io/4Nav/) • [📥 Baixar Executável (.exe)](https://github.com/MrKevinLD/4Nav/releases/latest) • [⌨️ Atalhos](#-atalhos-de-teclado)
 
 </div>
 
@@ -55,7 +55,7 @@ Certifique-se de ter o [Node.js](https://nodejs.org/) (versão 18+) instalado:
 
 ```bash
 # 1. Clone o repositório
-git clone https://github.com/SEU_USUARIO/4Nav.git
+git clone https://github.com/MrKevinLD/4Nav.git
 cd 4Nav
 
 # 2. Instale as dependências
