@@ -129,7 +129,7 @@ export const QuadGrid: React.FC<QuadGridProps> = ({
     return (
       <main
         ref={containerRef}
-        className="relative flex-1 w-full h-[calc(100dvh-42px)] bg-[#090A0C] overflow-hidden select-none"
+        className="relative flex-1 w-full h-full bg-[#090A0C] overflow-hidden select-none"
       >
         {renderQuadrant(paneIds[0], 0)}
       </main>
@@ -141,7 +141,7 @@ export const QuadGrid: React.FC<QuadGridProps> = ({
     return (
       <main
         ref={containerRef}
-        className="relative flex-1 w-full h-[calc(100dvh-42px)] bg-[#090A0C] overflow-hidden select-none"
+        className="relative flex-1 w-full h-full bg-[#090A0C] overflow-hidden select-none"
       >
         {dragAxis && <div className="absolute inset-0 z-40 cursor-move" />}
 
@@ -181,8 +181,17 @@ export const QuadGrid: React.FC<QuadGridProps> = ({
               onPointerDown={() => setDragAxis('x')}
               onDoubleClick={() => onUpdateGridSplit(50, splitY)}
               title="Arraste para redimensionar (Duplo-clique para 50%)"
-              className="w-full h-full bg-[#111317] hover:bg-[#10B981] active:bg-[#10B981] cursor-col-resize transition-colors z-30"
-            />
+              className="relative w-full h-full bg-[#111317] hover:bg-[#10B981] active:bg-[#10B981] cursor-col-resize transition-colors z-30 group select-none"
+            >
+              {/* Expanded touch target for fingers on mobile */}
+              <div className="absolute inset-y-0 -left-3 -right-3 z-40 cursor-col-resize" />
+              {/* Visual touch drag pill handle */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[14px] h-[36px] bg-[#181B21] border border-[#232832] group-hover:border-[#10B981] group-hover:bg-[#10B981]/20 rounded-full flex flex-col items-center justify-center gap-1 shadow-lg pointer-events-none transition-colors">
+                <div className="w-[3px] h-[3px] rounded-full bg-[#9CA3AF] group-hover:bg-[#10B981]" />
+                <div className="w-[3px] h-[3px] rounded-full bg-[#9CA3AF] group-hover:bg-[#10B981]" />
+                <div className="w-[3px] h-[3px] rounded-full bg-[#9CA3AF] group-hover:bg-[#10B981]" />
+              </div>
+            </div>
           )}
 
           {renderQuadrant(paneIds[1], 1)}
@@ -196,7 +205,7 @@ export const QuadGrid: React.FC<QuadGridProps> = ({
     return (
       <main
         ref={containerRef}
-        className="relative flex-1 w-full h-[calc(100dvh-42px)] bg-[#090A0C] overflow-hidden select-none"
+        className="relative flex-1 w-full h-full bg-[#090A0C] overflow-hidden select-none"
       >
         {dragAxis && <div className="absolute inset-0 z-40 cursor-move" />}
 
@@ -238,8 +247,10 @@ export const QuadGrid: React.FC<QuadGridProps> = ({
               onPointerDown={() => setDragAxis('x')}
               onDoubleClick={() => onUpdateGridSplit(50, splitY)}
               title="Arraste para redimensionar horizontalmente (Duplo-clique para 50%)"
-              className="w-full h-full bg-[#111317] hover:bg-[#10B981] active:bg-[#10B981] cursor-col-resize transition-colors row-span-3 col-start-2 row-start-1 z-30"
-            />
+              className="relative w-full h-full bg-[#111317] hover:bg-[#10B981] active:bg-[#10B981] cursor-col-resize transition-colors row-span-3 col-start-2 row-start-1 z-30 group select-none"
+            >
+              <div className="absolute inset-y-0 -left-3 -right-3 z-40 cursor-col-resize" />
+            </div>
           )}
 
           {renderQuadrant(paneIds[1], 1)}
@@ -249,8 +260,10 @@ export const QuadGrid: React.FC<QuadGridProps> = ({
               onPointerDown={() => setDragAxis('y')}
               onDoubleClick={() => onUpdateGridSplit(splitX, 50)}
               title="Arraste para redimensionar verticalmente (Duplo-clique para 50%)"
-              className="w-full h-full bg-[#111317] hover:bg-[#10B981] active:bg-[#10B981] cursor-row-resize transition-colors col-span-3 col-start-1 row-start-2 z-30"
-            />
+              className="relative w-full h-full bg-[#111317] hover:bg-[#10B981] active:bg-[#10B981] cursor-row-resize transition-colors col-span-3 col-start-1 row-start-2 z-30 group select-none"
+            >
+              <div className="absolute inset-x-0 -top-3 -bottom-3 z-40 cursor-row-resize" />
+            </div>
           )}
 
           {renderQuadrant(paneIds[2], 2)}
@@ -280,7 +293,7 @@ export const QuadGrid: React.FC<QuadGridProps> = ({
   return (
     <main
       ref={containerRef}
-      className="relative flex-1 w-full h-[calc(100dvh-42px)] bg-[#090A0C] overflow-hidden select-none"
+      className="relative flex-1 w-full h-full bg-[#090A0C] overflow-hidden select-none"
     >
       {maximizedPane && (
         <div className="absolute top-2 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 px-3 py-1 bg-[#090A0C]/90 border border-[#10B981] rounded-[2px] shadow-2xl backdrop-blur text-[11px] text-[#F3F4F6]">

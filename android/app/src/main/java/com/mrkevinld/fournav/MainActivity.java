@@ -111,6 +111,9 @@ public class MainActivity extends BridgeActivity {
             settings.setJavaScriptCanOpenWindowsAutomatically(true);
             settings.setMediaPlaybackRequiresUserGesture(false);
             settings.setSafeBrowsingEnabled(false);
+            settings.setTextZoom(100);
+            settings.setUseWideViewPort(true);
+            settings.setLoadWithOverviewMode(true);
             
             // Use real Android Chrome User-Agent without '; wv' so Google and websites treat it as a standard Chrome browser
             try {

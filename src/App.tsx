@@ -145,6 +145,9 @@ export const App: React.FC = () => {
       <TabBar
         tabs={tabs}
         activeTabId={activeTabId}
+        splitX={currentTab.splitX}
+        splitY={currentTab.splitY}
+        maximizedPane={currentTab.maximizedPane}
         onSelectTab={setActiveTabId}
         onAddTab={() => addTab()}
         onAddPane={() => addPane(currentTab.id, settings.defaultNewPaneUrl)}
@@ -158,6 +161,12 @@ export const App: React.FC = () => {
             toggleMaximizePane(currentTab.id, currentTab.maximizedPane);
           }
         }}
+        onSetSplit={(x, y) => {
+          updateGridSplit(currentTab.id, x, y);
+          if (currentTab.maximizedPane) {
+            toggleMaximizePane(currentTab.id, currentTab.maximizedPane);
+          }
+        }}
         onApplyPreset={(urls) => applyPresetToTab(currentTab.id, urls)}
         onOpenSettings={() => setIsSettingsOpen(true)}
       />
@@ -165,7 +174,13 @@ export const App: React.FC = () => {
       {/* Main Grid Viewport for Active Tab */}
       <div
         className={`relative flex-1 w-full overflow-hidden ${
-          showMobileBottomBar ? 'h-[calc(100dvh-42px-56px)]' : 'h-[calc(100dvh-42px)]'
+          showMobileBottomBar
+            ? isMobile
+              ? 'h-[calc(100dvh-32px-56px)]'
+              : 'h-[calc(100dvh-40px-56px)]'
+            : isMobile
+            ? 'h-[calc(100dvh-32px)]'
+            : 'h-[calc(100dvh-40px)]'
         }`}
       >
         {tabs.map((tab) => {
