@@ -38,6 +38,7 @@ public class MainActivity extends BridgeActivity {
     private static final String TAG = "4Nav";
     private static final List<String> RECENT_LOGS = Collections.synchronizedList(new ArrayList<>());
     private static OkHttpClient okHttpClient;
+    private static String appUserAgent;
 
     public static void logMessage(String msg) {
         Log.d(TAG, msg);
@@ -110,7 +111,15 @@ public class MainActivity extends BridgeActivity {
             settings.setJavaScriptCanOpenWindowsAutomatically(true);
             settings.setMediaPlaybackRequiresUserGesture(false);
             settings.setSafeBrowsingEnabled(false);
-            settings.setUserAgentString("Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Mobile Safari/537.36");
+            
+            // Use real Android Chrome User-Agent without '; wv' so Google and websites treat it as a standard Chrome browser
+            try {
+                String defaultUa = WebSettings.getDefaultUserAgent(this);
+                appUserAgent = defaultUa != null ? defaultUa.replace("; wv", "") : "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.6834.163 Mobile Safari/537.36";
+            } catch (Exception e) {
+                appUserAgent = "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.6834.163 Mobile Safari/537.36";
+            }
+            settings.setUserAgentString(appUserAgent);
 
             // Register native bridge for performance and screen wake lock
             webView.addJavascriptInterface(new AndroidBridgeInterface(), "AndroidBridge");
@@ -144,6 +153,7 @@ public class MainActivity extends BridgeActivity {
                 for (Cookie c : cookies) {
                     cm.setCookie(urlStr, c.toString());
                 }
+                cm.flush();
             }
 
             @Override
@@ -190,7 +200,7 @@ public class MainActivity extends BridgeActivity {
                     @Override
                     public WebResourceResponse shouldInterceptRequest(WebResourceRequest request) {
                         if (request != null && request.getUrl() != null) {
-                            WebResourceResponse resp = processIntercept(request.getUrl().toString(), request.getMethod());
+                            WebResourceResponse resp = processIntercept(request.getUrl().toString(), request.getMethod(), request.getRequestHeaders());
                             if (resp != null) return resp;
                         }
                         Bridge bridge = getBridge();
@@ -249,6 +259,10 @@ public class MainActivity extends BridgeActivity {
     }
 
     public static WebResourceResponse processIntercept(String urlStr, String method) {
+        return processIntercept(urlStr, method, null);
+    }
+
+    public static WebResourceResponse processIntercept(String urlStr, String method, Map<String, String> incomingHeaders) {
         Uri uri = Uri.parse(urlStr);
         if (uri == null) return null;
 
@@ -293,18 +307,28 @@ public class MainActivity extends BridgeActivity {
 
             Request.Builder reqBuilder = new Request.Builder()
                     .url(urlStr)
-                    .get()
-                    .header("User-Agent", "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Mobile Safari/537.36")
-                    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8")
-                    .header("Accept-Language", "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7")
-                    .header("Sec-Ch-Ua", "\"Not A(Brand\";v=\"8\", \"Chromium\";v=\"132\", \"Google Chrome\";v=\"132\"")
-                    .header("Sec-Ch-Ua-Mobile", "?1")
-                    .header("Sec-Ch-Ua-Platform", "\"Android\"")
-                    .header("Sec-Fetch-Dest", "document")
-                    .header("Sec-Fetch-Mode", "navigate")
-                    .header("Sec-Fetch-Site", "none")
-                    .header("Sec-Fetch-User", "?1")
-                    .header("Upgrade-Insecure-Requests", "1");
+                    .get();
+
+            // Forward the actual browser request headers to avoid triggering bot detection on Google, Twitch, etc.
+            if (incomingHeaders != null && !incomingHeaders.isEmpty()) {
+                for (Map.Entry<String, String> entry : incomingHeaders.entrySet()) {
+                    String name = entry.getKey();
+                    if (!name.equalsIgnoreCase("Host") && !name.equalsIgnoreCase("Content-Length") && !name.equalsIgnoreCase("Accept-Encoding")) {
+                        reqBuilder.header(name, entry.getValue());
+                    }
+                }
+            } else {
+                reqBuilder.header("User-Agent", appUserAgent != null ? appUserAgent : "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.6834.163 Mobile Safari/537.36");
+                reqBuilder.header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8");
+                reqBuilder.header("Accept-Language", "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7");
+                reqBuilder.header("Upgrade-Insecure-Requests", "1");
+            }
+
+            // Sync current cookies from CookieManager
+            String cmCookies = CookieManager.getInstance().getCookie(urlStr);
+            if (cmCookies != null && !cmCookies.isEmpty()) {
+                reqBuilder.header("Cookie", cmCookies);
+            }
 
             Response response = okHttpClient.newCall(reqBuilder.build()).execute();
             ResponseBody body = response.body();
@@ -332,7 +356,7 @@ public class MainActivity extends BridgeActivity {
                     String charsetName = encoding != null && !encoding.isEmpty() ? encoding : "UTF-8";
                     String js = new String(bodyBytes, charsetName);
 
-                    // 1. Force PAPEL_DA_PAGINA to 'app' rather than 'quadro'
+                    // Force PAPEL_DA_PAGINA to 'app' rather than 'quadro'
                     js = js.replace("window.top !== window.self ? 'quadro'", "false ? 'quadro'");
                     js = js.replace("PAPEL_DA_PAGINA === 'quadro' ? null :", "false ? null :");
                     js = js.replace("var appName = PAPEL_DA_PAGINA === 'quadro' ? null : APP_DA_URL || 'ONLINE';", "var appName = APP_DA_URL || 'ONLINE';");
@@ -345,8 +369,11 @@ public class MainActivity extends BridgeActivity {
                 }
             }
 
-            // If HTML document, inject <base> tag, disable service workers, and inject frame unblock + handshake polyfill
-            if (mimeType.toLowerCase(Locale.ROOT).contains("html") && bodyBytes.length > 0) {
+            boolean isRagIdle = host != null && host.toLowerCase(Locale.ROOT).contains("roclassicidle.com.br");
+
+            // ONLY modify HTML for RagIdle to inject its base path and server configs.
+            // NEVER inject scripts or modify HTML for Google or general sites (prevents triggering BotGuard / reCAPTCHA).
+            if (isRagIdle && mimeType.toLowerCase(Locale.ROOT).contains("html") && bodyBytes.length > 0) {
                 try {
                     String charsetName = encoding != null && !encoding.isEmpty() ? encoding : "UTF-8";
                     String html = new String(bodyBytes, charsetName);
@@ -370,43 +397,35 @@ public class MainActivity extends BridgeActivity {
                     }
                     String baseHref = cleanUrl.endsWith("/") ? cleanUrl : cleanUrl + "/";
 
-                    String roConfigPreload = "";
-                    if (urlStr.toLowerCase(Locale.ROOT).contains("roclassicidle")) {
-                        roConfigPreload = "try {"
-                                + "window.ROConfigLocal = window.ROConfigLocal || {"
-                                + "cadastroUrl: 'https://api.roclassicidle.com.br',"
-                                + "enableHudAdaptavel: true,"
-                                + "remoteClient: 'https://assets.roclassicidle.com.br/',"
-                                + "servers: [{"
-                                + "display: 'Rag Idle — v0 de teste',"
-                                + "desc: 'cadastre-se com _M ou _F no fim do usuario',"
-                                + "address: '127.0.0.1',"
-                                + "port: 6900,"
-                                + "packetver: 20211103,"
-                                + "renewal: true,"
-                                + "version: 55,"
-                                + "langtype: 12,"
-                                + "packetKeys: false,"
-                                + "socketProxy: 'wss://ws.roclassicidle.com.br',"
-                                + "remoteClient: 'https://assets.roclassicidle.com.br/',"
-                                + "worldMapSettings: { episode: 21 },"
-                                + "adminList: []"
-                                + "}],"
-                                + "skipIntro: true,"
-                                + "skipServerList: true,"
-                                + "loadLua: false,"
-                                + "packetDump: false,"
-                                + "development: false"
-                                + "};"
-                                + "} catch(e) {}";
-                    }
+                    String roConfigPreload = "try {"
+                            + "window.ROConfigLocal = window.ROConfigLocal || {"
+                            + "cadastroUrl: 'https://api.roclassicidle.com.br',"
+                            + "enableHudAdaptavel: true,"
+                            + "remoteClient: 'https://assets.roclassicidle.com.br/',"
+                            + "servers: [{"
+                            + "display: 'Rag Idle — v0 de teste',"
+                            + "desc: 'cadastre-se com _M ou _F no fim do usuario',"
+                            + "address: '127.0.0.1',"
+                            + "port: 6900,"
+                            + "packetver: 20211103,"
+                            + "renewal: true,"
+                            + "version: 55,"
+                            + "langtype: 12,"
+                            + "packetKeys: false,"
+                            + "socketProxy: 'wss://ws.roclassicidle.com.br',"
+                            + "remoteClient: 'https://assets.roclassicidle.com.br/',"
+                            + "worldMapSettings: { episode: 21 },"
+                            + "adminList: []"
+                            + "}],"
+                            + "skipIntro: true,"
+                            + "skipServerList: true,"
+                            + "loadLua: false,"
+                            + "packetDump: false,"
+                            + "development: false"
+                            + "};"
+                            + "} catch(e) {}";
 
                     String injectedHead = "<head><base href=\"" + baseHref + "\"><script>"
-                            + "try { var p=Object.getPrototypeOf(window);"
-                            + "Object.defineProperty(p,'top',{get:function(){return window;},configurable:true});"
-                            + "Object.defineProperty(p,'parent',{get:function(){return window;},configurable:true}); } catch(e){}"
-                            + "try { Object.defineProperty(window,'top',{get:function(){return window;},configurable:true});"
-                            + "Object.defineProperty(window,'parent',{get:function(){return window;},configurable:true}); } catch(e){}"
                             + "(function(){"
                             + "var _f=window.fetch;"
                             + "if(_f){"
@@ -435,7 +454,7 @@ public class MainActivity extends BridgeActivity {
                     bodyBytes = html.getBytes(StandardCharsets.UTF_8);
                     encoding = "utf-8";
                 } catch (Exception e) {
-                    logMessage("HTML mod error: " + e.getMessage());
+                    logMessage("RagIdle HTML mod error: " + e.getMessage());
                 }
             }
 
@@ -503,7 +522,7 @@ public class MainActivity extends BridgeActivity {
         @Override
         public WebResourceResponse shouldInterceptRequest(WebView view, String url) {
             if (url != null) {
-                WebResourceResponse resp = processIntercept(url, "GET");
+                WebResourceResponse resp = processIntercept(url, "GET", null);
                 if (resp != null) return resp;
             }
             return super.shouldInterceptRequest(view, url);
@@ -512,7 +531,7 @@ public class MainActivity extends BridgeActivity {
         @Override
         public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
             if (request != null && request.getUrl() != null) {
-                WebResourceResponse resp = processIntercept(request.getUrl().toString(), request.getMethod());
+                WebResourceResponse resp = processIntercept(request.getUrl().toString(), request.getMethod(), request.getRequestHeaders());
                 if (resp != null) return resp;
             }
             return super.shouldInterceptRequest(view, request);
