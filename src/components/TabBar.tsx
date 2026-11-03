@@ -432,13 +432,13 @@ export const TabBar: React.FC<TabBarProps> = ({
           <span className="hidden sm:inline">Configurações</span>
         </button>
 
-        {/* Mobile Hide Top Bar Button */}
-        {isMobile && onHide && (
+        {/* Hide All Bars / Immersive Mode Button */}
+        {onHide && (
           <button
             type="button"
             onClick={onHide}
-            title="Esconder barra de abas (ou deslize o dedo para cima)"
-            aria-label="Esconder barra de abas"
+            title="Modo Imersivo: Ocultar todas as barras (ou deslize para cima)"
+            aria-label="Ocultar todas as barras"
             className="w-[24px] h-[24px] flex items-center justify-center rounded-[2px] text-[#9CA3AF] hover:text-[#10B981] bg-[#111317] border border-[#232832] transition-colors cursor-pointer shrink-0"
           >
             <CaretUp size={13} weight="bold" />

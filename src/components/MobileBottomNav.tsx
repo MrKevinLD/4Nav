@@ -13,6 +13,7 @@ import {
   BatteryMedium,
   BatteryLow,
   Check,
+  CornersOut,
 } from '@phosphor-icons/react';
 import type { BrowserTab } from '../types/browser.types';
 import { useDeviceBattery } from '../hooks/useDeviceBattery';
@@ -30,6 +31,7 @@ interface MobileBottomNavProps {
   onToggleEcoMode: () => void;
   onClearMemory: () => void;
   onOpenSettings: () => void;
+  onToggleImmersiveMode?: () => void;
 }
 
 export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
@@ -45,6 +47,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   onToggleEcoMode,
   onClearMemory,
   onOpenSettings,
+  onToggleImmersiveMode,
 }) => {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const battery = useDeviceBattery();
@@ -176,6 +179,19 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
           >
             <Broom size={16} />
           </button>
+
+          {/* Full Immersive Mode (Hide All Bars) Button */}
+          {onToggleImmersiveMode && (
+            <button
+              type="button"
+              onClick={onToggleImmersiveMode}
+              title="Modo Imersivo (Ocultar todas as barras)"
+              aria-label="Ocultar todas as barras"
+              className="w-[36px] h-[42px] bg-[#111317] border border-[#232832] text-[#9CA3AF] active:text-[#10B981] active:scale-95 rounded-[3px] flex items-center justify-center shrink-0 transition-all cursor-pointer"
+            >
+              <CornersOut size={16} />
+            </button>
+          )}
 
           {/* Split Mode Toggle (Only if 2+ panes exist) */}
           {paneIds.length >= 2 && (

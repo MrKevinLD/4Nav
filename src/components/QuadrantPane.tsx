@@ -21,6 +21,7 @@ interface QuadrantPaneProps {
   isMaximized: boolean;
   shortcutLabel?: string;
   canClose?: boolean;
+  hideToolbar?: boolean;
   enableLiteMode?: boolean;
   muteBackgroundPanes?: boolean;
   defaultZoomLevel?: number;
@@ -58,6 +59,7 @@ export const QuadrantPane: React.FC<QuadrantPaneProps> = ({
   isMaximized,
   shortcutLabel,
   canClose,
+  hideToolbar = false,
   enableLiteMode,
   muteBackgroundPanes,
   defaultZoomLevel = 1,
@@ -293,14 +295,21 @@ export const QuadrantPane: React.FC<QuadrantPaneProps> = ({
     : pane.historyIndex < pane.history.length - 1;
 
   const isBlank = !pane.url || pane.url === 'about:blank';
+  const winNumber = pane.quadrantNumber || 1;
 
-  // Compute effective iframe src when running in Web Browser mode
-  const iframeSrc =
+  // Compute effective iframe src with window identifier parameter so storage and sessions partition cleanly
+  let rawIframeSrc =
     !isUnrestrictedRuntime && pane.useProxy
       ? `/api/proxy?session=${encodeURIComponent(effectiveSessionKey)}&url=${encodeURIComponent(
           pane.url
         )}`
       : pane.url;
+
+  let finalIframeSrc = rawIframeSrc;
+  if (finalIframeSrc && finalIframeSrc !== 'about:blank' && !finalIframeSrc.includes('_4nav_win=')) {
+    const sep = finalIframeSrc.includes('?') ? '&' : '?';
+    finalIframeSrc = `${finalIframeSrc}${sep}_4nav_win=${winNumber}`;
+  }
 
   const showXfoBanner =
     !isUnrestrictedRuntime && !isBlank && Boolean(pane.frameBlockedReason) && !pane.useProxy && !dismissedWarning;
@@ -314,42 +323,44 @@ export const QuadrantPane: React.FC<QuadrantPaneProps> = ({
       }`}
     >
       {/* Quadrant Individual Mini Toolbar */}
-      <PaneToolbar
-        pane={pane}
-        tabSessionNumber={tabSessionNumber}
-        containerColor={containerColor}
-        isActive={isActive}
-        isMaximized={isMaximized}
-        canGoBack={canGoBack}
-        canGoForward={canGoForward}
-        shortcutLabel={shortcutLabel}
-        canClose={canClose}
-        onNavigate={onNavigate}
-        onBack={handleBack}
-        onForward={handleForward}
-        onReload={handleReload}
-        onHome={() => onNavigate('about:blank')}
-        onToggleProxy={() =>
-          onUpdatePane((p) => ({
-            ...p,
-            useProxy: !p.useProxy,
-            frameBlockedReason: null,
-            isLoading: true,
-          }))
-        }
-        onToggleSubPaneIsolation={() =>
-          onUpdatePane((p) => ({
-            ...p,
-            isolateSubPane: !p.isolateSubPane,
-            reloadCounter: p.reloadCounter + 1,
-          }))
-        }
-        onToggleMute={() => onUpdatePane((p) => ({ ...p, isMuted: !p.isMuted }))}
-        onToggleMaximize={onToggleMaximize}
-        onOpenExternalPopup={handleOpenExternalPopup}
-        onFocusPane={onFocusPane}
-        onClosePane={onClosePane}
-      />
+      {!hideToolbar && (
+        <PaneToolbar
+          pane={pane}
+          tabSessionNumber={tabSessionNumber}
+          containerColor={containerColor}
+          isActive={isActive}
+          isMaximized={isMaximized}
+          canGoBack={canGoBack}
+          canGoForward={canGoForward}
+          shortcutLabel={shortcutLabel}
+          canClose={canClose}
+          onNavigate={onNavigate}
+          onBack={handleBack}
+          onForward={handleForward}
+          onReload={handleReload}
+          onHome={() => onNavigate('about:blank')}
+          onToggleProxy={() =>
+            onUpdatePane((p) => ({
+              ...p,
+              useProxy: !p.useProxy,
+              frameBlockedReason: null,
+              isLoading: true,
+            }))
+          }
+          onToggleSubPaneIsolation={() =>
+            onUpdatePane((p) => ({
+              ...p,
+              isolateSubPane: !p.isolateSubPane,
+              reloadCounter: p.reloadCounter + 1,
+            }))
+          }
+          onToggleMute={() => onUpdatePane((p) => ({ ...p, isMuted: !p.isMuted }))}
+          onToggleMaximize={onToggleMaximize}
+          onOpenExternalPopup={handleOpenExternalPopup}
+          onFocusPane={onFocusPane}
+          onClosePane={onClosePane}
+        />
+      )}
 
       {/* Loading Progress Hairline */}
       {pane.isLoading && !isBlank && (
@@ -392,9 +403,11 @@ export const QuadrantPane: React.FC<QuadrantPaneProps> = ({
           })
         ) : (
           <iframe
-            key={`${effectiveSessionKey}-${pane.useProxy ? 'proxy' : 'direct'}-${pane.reloadCounter}`}
-            src={iframeSrc}
-            title={`Quadrante ${pane.quadrantNumber} (${pane.title})`}
+            key={`win-${winNumber}-${effectiveSessionKey}-${pane.useProxy ? 'proxy' : 'direct'}-${pane.reloadCounter}`}
+            name={`4nav_pane_${winNumber}`}
+            id={`4nav_pane_${winNumber}`}
+            src={finalIframeSrc}
+            title={`Janela ${winNumber} (${pane.title})`}
             onLoad={() => {
               onUpdatePane((p) => ({ ...p, isLoading: false, frameBlockedReason: null }));
             }}

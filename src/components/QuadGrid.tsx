@@ -9,6 +9,7 @@ interface QuadGridProps {
   enableLiteMode?: boolean;
   muteBackgroundPanes?: boolean;
   defaultZoomLevel?: number;
+  hideToolbar?: boolean;
   onFocusPane: (paneId: string) => void;
   onNavigatePane: (paneId: string, rawInput: string) => void;
   onBackPane: (paneId: string) => void;
@@ -28,6 +29,7 @@ export const QuadGrid: React.FC<QuadGridProps> = ({
   enableLiteMode,
   muteBackgroundPanes,
   defaultZoomLevel = 1,
+  hideToolbar = false,
   onFocusPane,
   onNavigatePane,
   onBackPane,
@@ -108,6 +110,7 @@ export const QuadGrid: React.FC<QuadGridProps> = ({
           isMaximized={isMax}
           shortcutLabel={shortcut}
           canClose={paneCount > 1}
+          hideToolbar={hideToolbar}
           enableLiteMode={enableLiteMode}
           muteBackgroundPanes={muteBackgroundPanes}
           defaultZoomLevel={defaultZoomLevel}

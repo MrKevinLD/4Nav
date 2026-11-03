@@ -44,7 +44,7 @@ export const App: React.FC = () => {
   const { isMobile, isPortrait } = useMobileView();
   const [isDualSplit, setIsDualSplit] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isTopBarVisible, setIsTopBarVisible] = useState(true);
+  const [isImmersiveMode, setIsImmersiveMode] = useState(false);
   const edgeTouchStartY = useRef<number | null>(null);
 
   const handleEdgeTouchStart = (e: React.TouchEvent) => {
@@ -55,7 +55,7 @@ export const App: React.FC = () => {
     if (edgeTouchStartY.current !== null) {
       const deltaY = e.changedTouches[0].clientY - edgeTouchStartY.current;
       if (deltaY > 15) {
-        setIsTopBarVisible(true);
+        setIsImmersiveMode(false);
       }
       edgeTouchStartY.current = null;
     }
@@ -159,19 +159,17 @@ export const App: React.FC = () => {
         settings.enableEcoBatteryMode ? 'mobile-eco-mode' : ''
       }`}
     >
-      {/* Discreet pull-down tab when Top Bar is hidden on mobile */}
-      {!isTopBarVisible && (
+      {/* Discreet pull-down tab when in Full Immersive Mode */}
+      {isImmersiveMode && (
         <div
           onTouchStart={handleEdgeTouchStart}
           onTouchEnd={handleEdgeTouchEnd}
-          onClick={() => setIsTopBarVisible(true)}
-          title="Toque ou deslize para baixo para exibir o menu"
-          className="fixed top-0 left-0 right-0 h-6 z-50 flex justify-center items-start cursor-pointer select-none"
+          onClick={() => setIsImmersiveMode(false)}
+          title="Toque ou deslize para baixo para restaurar as barras"
+          className="fixed top-0 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1.5 px-3 py-1 bg-[#090A0C]/90 hover:bg-[#111317] border-b border-x border-[#10B981]/50 rounded-b-md shadow-2xl backdrop-blur text-[#10B981] text-[10px] font-mono cursor-pointer transition-all active:scale-95 group select-none"
         >
-          <div className="flex items-center gap-1 px-3 py-0.5 bg-[#090A0C]/90 hover:bg-[#111317] border-b border-x border-[#10B981]/50 rounded-b-md shadow-lg backdrop-blur text-[#10B981] text-[10px] font-mono animate-pulse hover:animate-none transition-all">
-            <CaretDown size={11} weight="bold" />
-            <span className="text-[9px] font-bold tracking-wider">MENU</span>
-          </div>
+          <CaretDown size={11} weight="bold" className="group-hover:translate-y-0.5 transition-transform" />
+          <span className="text-[9px] font-bold tracking-wider">MOSTRAR BARRAS</span>
         </div>
       )}
 
@@ -181,8 +179,8 @@ export const App: React.FC = () => {
         splitX={currentTab.splitX}
         splitY={currentTab.splitY}
         maximizedPane={currentTab.maximizedPane}
-        isVisible={isTopBarVisible}
-        onHide={() => setIsTopBarVisible(false)}
+        isVisible={!isImmersiveMode}
+        onHide={() => setIsImmersiveMode(true)}
         onSelectTab={setActiveTabId}
         onAddTab={() => addTab()}
         onAddPane={() => addPane(currentTab.id, settings.defaultNewPaneUrl)}
@@ -209,17 +207,15 @@ export const App: React.FC = () => {
       {/* Main Grid Viewport for Active Tab */}
       <div
         className={`relative flex-1 w-full overflow-hidden transition-all duration-300 ease-in-out ${
-          showMobileBottomBar
-            ? isTopBarVisible
-              ? isMobile
-                ? 'h-[calc(100dvh-32px-56px)]'
-                : 'h-[calc(100dvh-40px-56px)]'
-              : 'h-[calc(100dvh-56px)]'
-            : isTopBarVisible
+          isImmersiveMode
+            ? 'h-[100dvh]'
+            : showMobileBottomBar
             ? isMobile
-              ? 'h-[calc(100dvh-32px)]'
-              : 'h-[calc(100dvh-40px)]'
-            : 'h-[100dvh]'
+              ? 'h-[calc(100dvh-32px-56px)]'
+              : 'h-[calc(100dvh-40px-56px)]'
+            : isMobile
+            ? 'h-[calc(100dvh-32px)]'
+            : 'h-[calc(100dvh-40px)]'
         }`}
       >
         {tabs.map((tab) => {
@@ -237,6 +233,7 @@ export const App: React.FC = () => {
                 enableLiteMode={settings.enableLiteMode}
                 muteBackgroundPanes={settings.muteBackgroundPanes}
                 defaultZoomLevel={settings.defaultZoomLevel}
+                hideToolbar={isImmersiveMode}
                 onFocusPane={(paneId) => setActivePane(tab.id, paneId)}
                 onNavigatePane={(paneId, input) => navigatePane(tab.id, paneId, input)}
                 onBackPane={(paneId) => goBackPane(tab.id, paneId)}
@@ -255,13 +252,14 @@ export const App: React.FC = () => {
       </div>
 
       {/* Mobile Bottom Navigation Bar in Portrait mode */}
-      {showMobileBottomBar && (
+      {showMobileBottomBar && !isImmersiveMode && (
         <MobileBottomNav
           tab={currentTab}
           activePaneId={currentTab.activePane}
           isDualSplit={isDualSplit}
           keepScreenAwake={settings.keepScreenAwake}
           enableEcoBatteryMode={settings.enableEcoBatteryMode}
+          onToggleImmersiveMode={() => setIsImmersiveMode(true)}
           onSelectPane={(paneId) => {
             setActivePane(currentTab.id, paneId);
             if (!isDualSplit) {
