@@ -4,9 +4,11 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
+import android.webkit.ConsoleMessage;
 import android.webkit.CookieManager;
 import android.webkit.ServiceWorkerClient;
 import android.webkit.ServiceWorkerController;
+import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
@@ -97,6 +99,7 @@ public class MainActivity extends BridgeActivity {
         Bridge bridge = this.getBridge();
         if (bridge != null) {
             WebView webView = bridge.getWebView();
+            WebView.setWebContentsDebuggingEnabled(true);
             WebSettings settings = webView.getSettings();
 
             settings.setJavaScriptEnabled(true);
@@ -112,8 +115,6 @@ public class MainActivity extends BridgeActivity {
             settings.setMediaPlaybackRequiresUserGesture(false);
             settings.setSafeBrowsingEnabled(false);
             settings.setTextZoom(100);
-            settings.setUseWideViewPort(true);
-            settings.setLoadWithOverviewMode(true);
             
             // Use real Android Chrome User-Agent without '; wv' so Google and websites treat it as a standard Chrome browser
             try {
@@ -133,6 +134,20 @@ public class MainActivity extends BridgeActivity {
             CookieManager cookieManager = CookieManager.getInstance();
             cookieManager.setAcceptCookie(true);
             cookieManager.setAcceptThirdPartyCookies(webView, true);
+
+            webView.setWebChromeClient(new WebChromeClient() {
+                @Override
+                public boolean onConsoleMessage(ConsoleMessage consoleMessage) {
+                    if (consoleMessage != null) {
+                        String msg = "[" + consoleMessage.messageLevel() + "] "
+                                + consoleMessage.message() + " -- Line "
+                                + consoleMessage.lineNumber() + " of "
+                                + consoleMessage.sourceId();
+                        logMessage("JS: " + msg);
+                    }
+                    return super.onConsoleMessage(consoleMessage);
+                }
+            });
 
             applyCustomWebViewClient();
         }
@@ -428,6 +443,59 @@ public class MainActivity extends BridgeActivity {
                             + "};"
                             + "} catch(e) {}";
 
+                    String dialogFixScript = "(function(){"
+                            + "function dismissEscape(){"
+                            + "try{"
+                            + "var el=document.getElementById('Escape')||document.querySelector('[data-gui-component=\"Escape\"]');"
+                            + "if(el){el.style.display='none';}"
+                            + "}catch(e){}"
+                            + "}"
+                            + "function removeLoginGhosts(){"
+                            + "try{"
+                            + "var els=document.querySelectorAll('#WinLogin,#WinLoginV2,#WinLoginV3,[data-gui-component^=\"WinLogin\"]');"
+                            + "for(var i=0;i<els.length;i++){"
+                            + "els[i].style.display='none';"
+                            + "try{els[i].remove();}catch(e){}"
+                            + "}"
+                            + "}catch(e){}"
+                            + "}"
+                            + "function checkGameAndClean(){"
+                            + "var inGame=document.querySelector('[data-gui-component=\"BasicInfo\"],[data-gui-component=\"ChatBox\"],[data-gui-component=\"SkillList\"],#robrowser-canvas-overlay,.ri-hud-mobile');"
+                            + "if(inGame){removeLoginGhosts();}"
+                            + "}"
+                            + "setInterval(checkGameAndClean,700);"
+                            + "function handleInteraction(e){"
+                            + "try{"
+                            + "var t=e.target;"
+                            + "if(!t)return;"
+                            + "var txt=(t.textContent||'').trim();"
+                            + "var cls=t.className?String(t.className):'';"
+                            + "var id=t.id?String(t.id):'';"
+                            + "if(txt==='Continuar a Jogar'||cls.indexOf('cancel')!==-1||cls.indexOf('fechar-celular')!==-1){"
+                            + "dismissEscape();"
+                            + "}"
+                            + "if(id==='btn_connect'||txt.indexOf('Entrar em Midgard')!==-1||(cls.indexOf('connect')!==-1&&cls.indexOf('btn')!==-1)){"
+                            + "setTimeout(removeLoginGhosts,800);"
+                            + "setTimeout(removeLoginGhosts,2000);"
+                            + "setTimeout(removeLoginGhosts,4000);"
+                            + "}"
+                            + "}catch(err){}"
+                            + "}"
+                            + "window.addEventListener('click',handleInteraction,true);"
+                            + "window.addEventListener('touchend',handleInteraction,true);"
+                            + "var origAttach=Element.prototype.attachShadow;"
+                            + "if(origAttach){"
+                            + "Element.prototype.attachShadow=function(init){"
+                            + "var shadow=origAttach.call(this,init);"
+                            + "try{"
+                            + "shadow.addEventListener('click',handleInteraction,true);"
+                            + "shadow.addEventListener('touchend',handleInteraction,true);"
+                            + "}catch(e){}"
+                            + "return shadow;"
+                            + "};"
+                            + "}"
+                            + "})();";
+
                     String injectedHead = "<head><base href=\"" + baseHref + "\"><script>"
                             + "(function(){"
                             + "var _f=window.fetch;"
@@ -443,6 +511,7 @@ public class MainActivity extends BridgeActivity {
                             + "};"
                             + "}"
                             + "})();"
+                            + dialogFixScript
                             + roConfigPreload
                             + "</script>";
 
