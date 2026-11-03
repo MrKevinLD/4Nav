@@ -225,13 +225,27 @@ public class MainActivity extends BridgeActivity {
         if (lower.contains("carregar-jogo")) {
             return false;
         }
+
+        String host = uri.getHost();
+        if (host != null && host.toLowerCase(Locale.ROOT).contains("assets.roclassicidle.com.br")) {
+            // Let Chromium handle all binary game files directly, except the root probe which we handle if requested
+            if (path.length() > 1) {
+                return true;
+            }
+        }
+
         return lower.endsWith(".js") || lower.endsWith(".mjs")
                 || lower.endsWith(".css")
                 || lower.endsWith(".png") || lower.endsWith(".jpg") || lower.endsWith(".jpeg")
                 || lower.endsWith(".gif") || lower.endsWith(".webp") || lower.endsWith(".svg") || lower.endsWith(".ico")
+                || lower.endsWith(".bmp") || lower.endsWith(".tga")
                 || lower.endsWith(".woff") || lower.endsWith(".woff2") || lower.endsWith(".ttf") || lower.endsWith(".otf")
                 || lower.endsWith(".mp3") || lower.endsWith(".wav") || lower.endsWith(".ogg") || lower.endsWith(".mp4")
-                || lower.endsWith(".wasm") || lower.endsWith(".json") || lower.endsWith(".map");
+                || lower.endsWith(".wasm") || lower.endsWith(".json") || lower.endsWith(".map")
+                || lower.endsWith(".grf") || lower.endsWith(".spr") || lower.endsWith(".act")
+                || lower.endsWith(".gat") || lower.endsWith(".rsw") || lower.endsWith(".rsm")
+                || lower.endsWith(".pal") || lower.endsWith(".txt") || lower.endsWith(".xml")
+                || lower.endsWith(".lua") || lower.endsWith(".lub");
     }
 
     public static WebResourceResponse processIntercept(String urlStr, String method) {
@@ -249,6 +263,19 @@ public class MainActivity extends BridgeActivity {
         // Only intercept external HTTP/HTTPS requests
         if (scheme == null || (!scheme.equalsIgnoreCase("http") && !scheme.equalsIgnoreCase("https"))) {
             return null;
+        }
+
+        // Synthetic 200 response for RagIdle remoteClient health probe
+        if (host != null && host.toLowerCase(Locale.ROOT).contains("assets.roclassicidle.com.br")) {
+            String path = uri.getPath();
+            if (path == null || path.isEmpty() || path.equals("/")) {
+                Map<String, String> probeHeaders = new HashMap<>();
+                probeHeaders.put("Content-Type", "text/plain; charset=utf-8");
+                probeHeaders.put("Access-Control-Allow-Origin", "*");
+                probeHeaders.put("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
+                probeHeaders.put("Access-Control-Allow-Headers", "*");
+                return new WebResourceResponse("text/plain", "utf-8", 200, "OK", probeHeaders, new ByteArrayInputStream("OK".getBytes(StandardCharsets.UTF_8)));
+            }
         }
 
         // Let Chromium handle static binary/resource assets directly for optimal performance
@@ -380,6 +407,20 @@ public class MainActivity extends BridgeActivity {
                             + "Object.defineProperty(p,'parent',{get:function(){return window;},configurable:true}); } catch(e){}"
                             + "try { Object.defineProperty(window,'top',{get:function(){return window;},configurable:true});"
                             + "Object.defineProperty(window,'parent',{get:function(){return window;},configurable:true}); } catch(e){}"
+                            + "(function(){"
+                            + "var _f=window.fetch;"
+                            + "if(_f){"
+                            + "window.fetch=function(input,init){"
+                            + "try{"
+                            + "var u=typeof input==='string'?input:(input&&input.url?input.url:'');"
+                            + "if(u&&u.indexOf('assets.roclassicidle.com.br')!==-1&&(u.endsWith('assets.roclassicidle.com.br/')||u.endsWith('assets.roclassicidle.com.br')||u.indexOf('/?')!==-1)){"
+                            + "return Promise.resolve(new Response('OK',{status:200,statusText:'OK',headers:{'Content-Type':'text/plain','Access-Control-Allow-Origin':'*'}}));"
+                            + "}"
+                            + "}catch(e){}"
+                            + "return _f.apply(this,arguments);"
+                            + "};"
+                            + "}"
+                            + "})();"
                             + roConfigPreload
                             + "</script>";
 
