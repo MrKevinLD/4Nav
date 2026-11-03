@@ -33,7 +33,7 @@ export function createInitialPane(
     isLoading: normalized !== 'about:blank',
     reloadCounter: 0,
     useProxy: false,
-    isolateSubPane: false,
+    isolateSubPane: true,
     isMuted: false,
     zoomLevel: 1,
     frameBlockedReason: null,
@@ -113,6 +113,8 @@ export function useBrowserState() {
             paneOrder.forEach((pId: string, idx: number) => {
               if (!panes[pId]) {
                 panes[pId] = createInitialPane(pId, idx, 'about:blank');
+              } else if (panes[pId].isolateSubPane === undefined) {
+                panes[pId].isolateSubPane = true;
               }
             });
             return {
@@ -167,6 +169,11 @@ export function useBrowserState() {
     if (typeof window !== 'undefined' && window.electronAPI?.prepareSession) {
       tabs.forEach((tab) => {
         window.electronAPI?.prepareSession(`persist:${tab.sessionId}`).catch(() => {});
+        Object.values(tab.panes || {}).forEach((pane) => {
+          if (pane.isolateSubPane) {
+            window.electronAPI?.prepareSession(`persist:${tab.sessionId}-${pane.id}`).catch(() => {});
+          }
+        });
       });
     }
   }, [tabs]);
@@ -248,6 +255,9 @@ export function useBrowserState() {
         const oldSessionId = tab.sessionId;
         if (window.electronAPI?.clearSession) {
           window.electronAPI.clearSession(`persist:${oldSessionId}`).catch(() => {});
+          tab.paneOrder.forEach((pId) => {
+            window.electronAPI?.clearSession(`persist:${oldSessionId}-${pId}`).catch(() => {});
+          });
         }
         fetch(`/api/clear-session?session=${encodeURIComponent(oldSessionId)}`).catch(() => {});
 
