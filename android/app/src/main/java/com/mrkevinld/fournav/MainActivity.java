@@ -12,26 +12,39 @@ import com.getcapacitor.Bridge;
 import com.getcapacitor.BridgeActivity;
 import com.getcapacitor.BridgeWebViewClient;
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.security.SecureRandom;
-import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.zip.GZIPInputStream;
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
+import java.util.concurrent.TimeUnit;
+import okhttp3.Cookie;
+import okhttp3.CookieJar;
+import okhttp3.Headers;
+import okhttp3.HttpUrl;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
+import okhttp3.ResponseBody;
+import org.json.JSONArray;
 
 public class MainActivity extends BridgeActivity {
 
     private static final String TAG = "4Nav";
+    private static final List<String> RECENT_LOGS = Collections.synchronizedList(new ArrayList<>());
+    private static OkHttpClient okHttpClient;
+
+    private static void logMessage(String msg) {
+        Log.d(TAG, msg);
+        synchronized (RECENT_LOGS) {
+            if (RECENT_LOGS.size() > 100) {
+                RECENT_LOGS.remove(0);
+            }
+            RECENT_LOGS.add(msg);
+        }
+    }
 
     public class AndroidBridgeInterface {
         @android.webkit.JavascriptInterface
@@ -39,10 +52,10 @@ public class MainActivity extends BridgeActivity {
             runOnUiThread(() -> {
                 if (keepOn) {
                     getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-                    Log.d(TAG, "Screen WakeLock: ACTIVE (FLAG_KEEP_SCREEN_ON)");
+                    logMessage("Screen WakeLock: ACTIVE (FLAG_KEEP_SCREEN_ON)");
                 } else {
                     getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-                    Log.d(TAG, "Screen WakeLock: RELEASED");
+                    logMessage("Screen WakeLock: RELEASED");
                 }
             });
         }
@@ -55,8 +68,15 @@ public class MainActivity extends BridgeActivity {
                     b.getWebView().clearCache(false);
                 }
                 System.gc();
-                Log.d(TAG, "Native memory cache cleared & System.gc() called");
+                logMessage("Native memory cache cleared & System.gc() called");
             });
+        }
+
+        @android.webkit.JavascriptInterface
+        public String getRecentLogs() {
+            synchronized (RECENT_LOGS) {
+                return new JSONArray(RECENT_LOGS).toString();
+            }
         }
     }
 
@@ -66,6 +86,8 @@ public class MainActivity extends BridgeActivity {
 
         // Keep screen awake by default for idle farming games
         getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
+        initOkHttp();
 
         Bridge bridge = this.getBridge();
         if (bridge != null) {
@@ -96,7 +118,72 @@ public class MainActivity extends BridgeActivity {
             cookieManager.setAcceptCookie(true);
             cookieManager.setAcceptThirdPartyCookies(webView, true);
 
-            bridge.setWebViewClient(new FourNavWebViewClient(bridge));
+            applyCustomWebViewClient();
+        }
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        applyCustomWebViewClient();
+    }
+
+    private void initOkHttp() {
+        if (okHttpClient != null) return;
+
+        CookieJar cookieJar = new CookieJar() {
+            @Override
+            public void saveFromResponse(HttpUrl url, List<Cookie> cookies) {
+                CookieManager cm = CookieManager.getInstance();
+                String urlStr = url.toString();
+                for (Cookie c : cookies) {
+                    cm.setCookie(urlStr, c.toString());
+                }
+            }
+
+            @Override
+            public List<Cookie> loadForRequest(HttpUrl url) {
+                CookieManager cm = CookieManager.getInstance();
+                String cookieHeader = cm.getCookie(url.toString());
+                if (cookieHeader == null || cookieHeader.isEmpty()) {
+                    return Collections.emptyList();
+                }
+                List<Cookie> result = new ArrayList<>();
+                String[] pairs = cookieHeader.split(";");
+                for (String pair : pairs) {
+                    String[] parts = pair.trim().split("=", 2);
+                    if (parts.length == 2) {
+                        try {
+                            Cookie c = new Cookie.Builder()
+                                    .name(parts[0].trim())
+                                    .value(parts[1].trim())
+                                    .domain(url.host())
+                                    .path("/")
+                                    .build();
+                            result.add(c);
+                        } catch (Exception ignored) {}
+                    }
+                }
+                return result;
+            }
+        };
+
+        okHttpClient = new OkHttpClient.Builder()
+                .cookieJar(cookieJar)
+                .followRedirects(true)
+                .followSslRedirects(true)
+                .connectTimeout(15, TimeUnit.SECONDS)
+                .readTimeout(20, TimeUnit.SECONDS)
+                .build();
+    }
+
+    private void applyCustomWebViewClient() {
+        Bridge bridge = this.getBridge();
+        if (bridge != null && bridge.getWebView() != null) {
+            FourNavWebViewClient client = new FourNavWebViewClient(bridge);
+            bridge.setWebViewClient(client);
+            bridge.getWebView().setWebViewClient(client);
+            logMessage("FourNavWebViewClient applied to Bridge and WebView");
         }
     }
 
@@ -125,236 +212,167 @@ public class MainActivity extends BridgeActivity {
         }
 
         @Override
-        public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
-            Uri uri = request.getUrl();
-            if (uri == null) {
-                return super.shouldInterceptRequest(view, request);
+        public WebResourceResponse shouldInterceptRequest(WebView view, String url) {
+            if (url != null) {
+                WebResourceResponse resp = processIntercept(url, "GET");
+                if (resp != null) return resp;
             }
+            return super.shouldInterceptRequest(view, url);
+        }
+
+        @Override
+        public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+            if (request != null && request.getUrl() != null) {
+                WebResourceResponse resp = processIntercept(request.getUrl().toString(), request.getMethod());
+                if (resp != null) return resp;
+            }
+            return super.shouldInterceptRequest(view, request);
+        }
+
+        private WebResourceResponse processIntercept(String urlStr, String method) {
+            Uri uri = Uri.parse(urlStr);
+            if (uri == null) return null;
 
             String scheme = uri.getScheme();
             String host = uri.getHost();
 
             // Local Capacitor web assets (e.g. localhost, capacitor://) are served by Capacitor local server
             if (scheme != null && (scheme.equalsIgnoreCase("capacitor") || host == null || host.equalsIgnoreCase("localhost") || host.equalsIgnoreCase("127.0.0.1"))) {
-                return super.shouldInterceptRequest(view, request);
+                return null;
             }
 
-            // Only intercept external HTTP/HTTPS GET requests that are HTML documents or non-static assets
-            String method = request.getMethod();
-            if ("GET".equalsIgnoreCase(method) && scheme != null && (scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https"))) {
-                
-                // Let Chromium handle static binary/resource assets directly for optimal performance
-                if (isStaticAsset(uri)) {
-                    return super.shouldInterceptRequest(view, request);
-                }
-
-                try {
-                    String currentUrl = uri.toString();
-                    HttpURLConnection conn = null;
-                    int redirects = 0;
-
-                    while (redirects < 8) {
-                        URL target = new URL(currentUrl);
-                        conn = (HttpURLConnection) target.openConnection();
-
-                        // Configure permissive SSL socket factory and hostname verifier for HTTPS
-                        if (conn instanceof HttpsURLConnection) {
-                            HttpsURLConnection httpsConn = (HttpsURLConnection) conn;
-                            httpsConn.setHostnameVerifier((h, session) -> true);
-                            try {
-                                SSLContext sc = SSLContext.getInstance("TLS");
-                                sc.init(null, new TrustManager[] {
-                                    new X509TrustManager() {
-                                        public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
-                                        public void checkClientTrusted(X509Certificate[] certs, String authType) {}
-                                        public void checkServerTrusted(X509Certificate[] certs, String authType) {}
-                                    }
-                                }, new SecureRandom());
-                                httpsConn.setSSLSocketFactory(sc.getSocketFactory());
-                            } catch (Exception ignored) {}
-                        }
-
-                        conn.setRequestMethod("GET");
-                        conn.setInstanceFollowRedirects(false);
-                        conn.setConnectTimeout(15000);
-                        conn.setReadTimeout(20000);
-
-                        // Emulate top-level Android Chrome navigation headers
-                        conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Mobile Safari/537.36");
-                        conn.setRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8");
-                        conn.setRequestProperty("Accept-Language", "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7");
-                        conn.setRequestProperty("Accept-Encoding", "identity"); // Raw bytes, avoids decompression collision
-                        conn.setRequestProperty("Sec-Ch-Ua", "\"Not A(Brand\";v=\"8\", \"Chromium\";v=\"132\", \"Google Chrome\";v=\"132\"");
-                        conn.setRequestProperty("Sec-Ch-Ua-Mobile", "?1");
-                        conn.setRequestProperty("Sec-Ch-Ua-Platform", "\"Android\"");
-                        conn.setRequestProperty("Sec-Fetch-Dest", "document");
-                        conn.setRequestProperty("Sec-Fetch-Mode", "navigate");
-                        conn.setRequestProperty("Sec-Fetch-Site", "none");
-                        conn.setRequestProperty("Sec-Fetch-User", "?1");
-                        conn.setRequestProperty("Upgrade-Insecure-Requests", "1");
-
-                        // Forward cookies from CookieManager
-                        try {
-                            String cookie = CookieManager.getInstance().getCookie(currentUrl);
-                            if (cookie != null && !cookie.isEmpty()) {
-                                conn.setRequestProperty("Cookie", cookie);
-                            }
-                        } catch (Exception ignored) {}
-
-                        conn.connect();
-
-                        int code = conn.getResponseCode();
-
-                        // Collect Set-Cookie headers back into CookieManager
-                        Map<String, List<String>> headerFields = conn.getHeaderFields();
-                        if (headerFields != null) {
-                            for (Map.Entry<String, List<String>> entry : headerFields.entrySet()) {
-                                String key = entry.getKey();
-                                if (key != null && (key.equalsIgnoreCase("Set-Cookie") || key.equalsIgnoreCase("Set-Cookie2")) && entry.getValue() != null) {
-                                    for (String val : entry.getValue()) {
-                                        if (val != null) {
-                                            try {
-                                                CookieManager.getInstance().setCookie(currentUrl, val);
-                                            } catch (Exception ignored) {}
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        // Follow redirects across protocols
-                        if (code == HttpURLConnection.HTTP_MOVED_PERM || code == HttpURLConnection.HTTP_MOVED_TEMP || code == 301 || code == 302 || code == 303 || code == 307 || code == 308) {
-                            String loc = conn.getHeaderField("Location");
-                            if (loc != null) {
-                                URL next = new URL(target, loc);
-                                currentUrl = next.toString();
-                                redirects++;
-                                conn.disconnect();
-                                continue;
-                            }
-                        }
-                        break;
-                    }
-
-                    if (conn != null) {
-                        int code = conn.getResponseCode();
-                        String contentTypeHeader = conn.getContentType();
-                        String mimeType = "text/html";
-                        String encoding = "utf-8";
-
-                        if (contentTypeHeader != null) {
-                            String[] parts = contentTypeHeader.split(";");
-                            mimeType = parts[0].trim();
-                            if (parts.length > 1) {
-                                String p2 = parts[1].trim().toLowerCase(Locale.ROOT);
-                                if (p2.startsWith("charset=")) {
-                                    encoding = p2.substring(8).trim();
-                                }
-                            }
-                        }
-
-                        // Read uncompressed response stream directly
-                        InputStream in = (code >= 400) ? conn.getErrorStream() : conn.getInputStream();
-                        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                        if (in != null) {
-                            byte[] buf = new byte[8192];
-                            int n;
-                            while ((n = in.read(buf)) != -1) {
-                                bos.write(buf, 0, n);
-                            }
-                            in.close();
-                        }
-                        byte[] bodyBytes = bos.toByteArray();
-
-                        // Automatically decompress gzip if server sent compressed bytes
-                        String contentEncoding = conn.getContentEncoding();
-                        if (bodyBytes.length >= 2 && ("gzip".equalsIgnoreCase(contentEncoding) || (bodyBytes[0] == (byte) 0x1f && bodyBytes[1] == (byte) 0x8b))) {
-                            try {
-                                GZIPInputStream gis = new GZIPInputStream(new ByteArrayInputStream(bodyBytes));
-                                ByteArrayOutputStream decompressed = new ByteArrayOutputStream();
-                                byte[] dBuf = new byte[8192];
-                                int dRead;
-                                while ((dRead = gis.read(dBuf)) != -1) {
-                                    decompressed.write(dBuf, 0, dRead);
-                                }
-                                gis.close();
-                                bodyBytes = decompressed.toByteArray();
-                            } catch (Exception ignored) {}
-                        }
-
-                        // If HTML document, inject <base> tag and frame unblock polyfill
-                        if (mimeType.toLowerCase(Locale.ROOT).contains("html") && bodyBytes.length > 0) {
-                            try {
-                                String charsetName = encoding != null && !encoding.isEmpty() ? encoding : "UTF-8";
-                                String html = new String(bodyBytes, charsetName);
-
-                                // Expunge any meta http-equiv="X-Frame-Options" or CSP
-                                html = html.replaceAll("(?i)<meta[^>]*http-equiv=[\"']?x-frame-options[\"']?[^>]*>", "");
-                                html = html.replaceAll("(?i)<meta[^>]*http-equiv=[\"']?content-security-policy[\"']?[^>]*>", "");
-
-                                String baseHref = currentUrl.endsWith("/") ? currentUrl : currentUrl + "/";
-                                String injectedHead = "<head><base href=\"" + baseHref + "\"><script>"
-                                        + "try { var p=Object.getPrototypeOf(window);"
-                                        + "Object.defineProperty(p,'top',{get:function(){return window;},configurable:true});"
-                                        + "Object.defineProperty(p,'parent',{get:function(){return window;},configurable:true}); } catch(e){}"
-                                        + "try { Object.defineProperty(window,'top',{get:function(){return window;},configurable:true});"
-                                        + "Object.defineProperty(window,'parent',{get:function(){return window;},configurable:true}); } catch(e){}"
-                                        + "</script>";
-
-                                if (html.contains("<head>")) {
-                                    html = html.replaceFirst("(?i)<head>", injectedHead);
-                                } else if (html.contains("<html>")) {
-                                    html = html.replaceFirst("(?i)<html>", "<html>" + injectedHead + "</head>");
-                                } else {
-                                    html = injectedHead + "</head>" + html;
-                                }
-
-                                bodyBytes = html.getBytes(StandardCharsets.UTF_8);
-                                encoding = "utf-8";
-                            } catch (Exception ignored) {}
-                        }
-
-                        // Build clean response headers: NO X-Frame-Options, NO Content-Security-Policy
-                        Map<String, String> responseHeaders = new HashMap<>();
-                        responseHeaders.put("Content-Type", mimeType + "; charset=" + encoding);
-                        responseHeaders.put("Access-Control-Allow-Origin", "*");
-                        responseHeaders.put("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, DELETE");
-                        responseHeaders.put("Access-Control-Allow-Headers", "*");
-                        responseHeaders.put("Access-Control-Allow-Credentials", "true");
-                        responseHeaders.put("Cache-Control", "no-cache, no-store, must-revalidate");
-                        responseHeaders.put("Pragma", "no-cache");
-                        responseHeaders.put("Expires", "0");
-
-                        Log.d(TAG, "Successfully intercepted and unblocked frame: " + uri);
-
-                        return new WebResourceResponse(
-                            mimeType,
-                            encoding,
-                            200,
-                            "OK",
-                            responseHeaders,
-                            new ByteArrayInputStream(bodyBytes)
-                        );
-                    }
-                } catch (Exception ex) {
-                    Log.e(TAG, "Interception failed for: " + uri, ex);
-                    // NEVER fallback to super for documents, as Chromium will fetch original X-Frame-Options and show ERR_BLOCKED_BY_RESPONSE!
-                    String errorMsg = ex.getClass().getSimpleName() + ": " + ex.getMessage();
-                    String errorHtml = "<!DOCTYPE html><html><body style=\"background:#090A0C;color:#EF4444;font-family:sans-serif;padding:24px;text-align:center;\">"
-                            + "<div style=\"max-width:400px;margin:40px auto;border:1px solid #232832;background:#111317;padding:20px;border-radius:4px;\">"
-                            + "<h3 style=\"color:#F3F4F6;margin-top:0;\">Falha ao Conectar</h3>"
-                            + "<p style=\"color:#9CA3AF;font-size:12px;\">Ocorreu um erro ao interceptar o site: <br><code style=\"color:#10B981;\">" + uri + "</code></p>"
-                            + "<p style=\"background:#181B21;padding:8px;font-size:11px;color:#F87171;word-break:break-all;\">" + errorMsg + "</p>"
-                            + "<button onclick=\"location.reload()\" style=\"background:#10B981;color:#000;border:none;padding:8px 16px;border-radius:2px;font-weight:bold;cursor:pointer;margin-top:10px;\">Recarregar</button>"
-                            + "</div></body></html>";
-                    Map<String, String> errHeaders = new HashMap<>();
-                    errHeaders.put("Content-Type", "text/html; charset=utf-8");
-                    errHeaders.put("Access-Control-Allow-Origin", "*");
-                    return new WebResourceResponse("text/html", "utf-8", 200, "OK", errHeaders, new ByteArrayInputStream(errorHtml.getBytes(StandardCharsets.UTF_8)));
-                }
+            // Only intercept external HTTP/HTTPS requests
+            if (scheme == null || (!scheme.equalsIgnoreCase("http") && !scheme.equalsIgnoreCase("https"))) {
+                return null;
             }
 
-            return super.shouldInterceptRequest(view, request);
+            // Let Chromium handle static binary/resource assets directly for optimal performance
+            if (isStaticAsset(uri)) {
+                return null;
+            }
+
+            // Only intercept GET requests for HTML documents or frames
+            if (method != null && !"GET".equalsIgnoreCase(method)) {
+                return null;
+            }
+
+            try {
+                logMessage("OkHttp Intercepting: " + urlStr);
+
+                Request.Builder reqBuilder = new Request.Builder()
+                        .url(urlStr)
+                        .get()
+                        .header("User-Agent", "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Mobile Safari/537.36")
+                        .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8")
+                        .header("Accept-Language", "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7")
+                        .header("Sec-Ch-Ua", "\"Not A(Brand\";v=\"8\", \"Chromium\";v=\"132\", \"Google Chrome\";v=\"132\"")
+                        .header("Sec-Ch-Ua-Mobile", "?1")
+                        .header("Sec-Ch-Ua-Platform", "\"Android\"")
+                        .header("Sec-Fetch-Dest", "document")
+                        .header("Sec-Fetch-Mode", "navigate")
+                        .header("Sec-Fetch-Site", "none")
+                        .header("Sec-Fetch-User", "?1")
+                        .header("Upgrade-Insecure-Requests", "1");
+
+                Response response = okHttpClient.newCall(reqBuilder.build()).execute();
+                ResponseBody body = response.body();
+
+                String contentTypeHeader = response.header("Content-Type", "text/html; charset=utf-8");
+                String mimeType = "text/html";
+                String encoding = "utf-8";
+
+                if (contentTypeHeader != null) {
+                    String[] parts = contentTypeHeader.split(";");
+                    mimeType = parts[0].trim();
+                    if (parts.length > 1) {
+                        String p2 = parts[1].trim().toLowerCase(Locale.ROOT);
+                        if (p2.startsWith("charset=")) {
+                            encoding = p2.substring(8).trim();
+                        }
+                    }
+                }
+
+                byte[] bodyBytes = body != null ? body.bytes() : new byte[0];
+
+                // If HTML document, inject <base> tag and frame unblock polyfill
+                if (mimeType.toLowerCase(Locale.ROOT).contains("html") && bodyBytes.length > 0) {
+                    try {
+                        String charsetName = encoding != null && !encoding.isEmpty() ? encoding : "UTF-8";
+                        String html = new String(bodyBytes, charsetName);
+
+                        // Expunge any meta http-equiv="X-Frame-Options" or CSP
+                        html = html.replaceAll("(?i)<meta[^>]*http-equiv=[\"']?x-frame-options[\"']?[^>]*>", "");
+                        html = html.replaceAll("(?i)<meta[^>]*http-equiv=[\"']?content-security-policy[\"']?[^>]*>", "");
+
+                        String baseHref = urlStr.endsWith("/") ? urlStr : urlStr + "/";
+                        String injectedHead = "<head><base href=\"" + baseHref + "\"><script>"
+                                + "try { var p=Object.getPrototypeOf(window);"
+                                + "Object.defineProperty(p,'top',{get:function(){return window;},configurable:true});"
+                                + "Object.defineProperty(p,'parent',{get:function(){return window;},configurable:true}); } catch(e){}"
+                                + "try { Object.defineProperty(window,'top',{get:function(){return window;},configurable:true});"
+                                + "Object.defineProperty(window,'parent',{get:function(){return window;},configurable:true}); } catch(e){}"
+                                + "</script>";
+
+                        if (html.contains("<head>")) {
+                            html = html.replaceFirst("(?i)<head>", injectedHead);
+                        } else if (html.contains("<html>")) {
+                            html = html.replaceFirst("(?i)<html>", "<html>" + injectedHead + "</head>");
+                        } else {
+                            html = injectedHead + "</head>" + html;
+                        }
+
+                        bodyBytes = html.getBytes(StandardCharsets.UTF_8);
+                        encoding = "utf-8";
+                    } catch (Exception e) {
+                        logMessage("HTML mod error: " + e.getMessage());
+                    }
+                }
+
+                // Build sanitized response headers: NO X-Frame-Options, NO Content-Security-Policy
+                Map<String, String> responseHeaders = new HashMap<>();
+                Headers okHeaders = response.headers();
+                for (int i = 0; i < okHeaders.size(); i++) {
+                    String name = okHeaders.name(i);
+                    String lower = name.toLowerCase(Locale.ROOT);
+                    if (lower.equals("x-frame-options") || lower.equals("frame-options")
+                            || lower.equals("content-security-policy") || lower.equals("content-security-policy-report-only")) {
+                        continue;
+                    }
+                    responseHeaders.put(name, okHeaders.value(i));
+                }
+
+                responseHeaders.put("Access-Control-Allow-Origin", "*");
+                responseHeaders.put("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, DELETE");
+                responseHeaders.put("Access-Control-Allow-Headers", "*");
+                responseHeaders.put("Access-Control-Allow-Credentials", "true");
+                responseHeaders.put("Cache-Control", "no-cache, no-store, must-revalidate");
+
+                logMessage("OkHttp unblocked frame: " + urlStr + " (code: " + response.code() + ", bytes: " + bodyBytes.length + ")");
+
+                return new WebResourceResponse(
+                        mimeType,
+                        encoding,
+                        response.code(),
+                        response.message().isEmpty() ? "OK" : response.message(),
+                        responseHeaders,
+                        new ByteArrayInputStream(bodyBytes)
+                );
+            } catch (Exception ex) {
+                logMessage("OkHttp error for " + urlStr + ": " + ex.getClass().getSimpleName() + " - " + ex.getMessage());
+                Log.e(TAG, "OkHttp failed for: " + urlStr, ex);
+                String errorMsg = ex.getClass().getSimpleName() + ": " + ex.getMessage();
+                String errorHtml = "<!DOCTYPE html><html><body style=\"background:#090A0C;color:#EF4444;font-family:sans-serif;padding:24px;text-align:center;\">"
+                        + "<div style=\"max-width:400px;margin:40px auto;border:1px solid #232832;background:#111317;padding:20px;border-radius:4px;\">"
+                        + "<h3 style=\"color:#F3F4F6;margin-top:0;\">Falha ao Conectar</h3>"
+                        + "<p style=\"color:#9CA3AF;font-size:12px;\">Ocorreu um erro ao interceptar o site: <br><code style=\"color:#10B981;\">" + urlStr + "</code></p>"
+                        + "<p style=\"background:#181B21;padding:8px;font-size:11px;color:#F87171;word-break:break-all;\">" + errorMsg + "</p>"
+                        + "<button onclick=\"location.reload()\" style=\"background:#10B981;color:#000;border:none;padding:8px 16px;border-radius:2px;font-weight:bold;cursor:pointer;margin-top:10px;\">Recarregar</button>"
+                        + "</div></body></html>";
+                Map<String, String> errHeaders = new HashMap<>();
+                errHeaders.put("Content-Type", "text/html; charset=utf-8");
+                errHeaders.put("Access-Control-Allow-Origin", "*");
+                return new WebResourceResponse("text/html", "utf-8", 200, "OK", errHeaders, new ByteArrayInputStream(errorHtml.getBytes(StandardCharsets.UTF_8)));
+            }
         }
     }
 }

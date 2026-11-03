@@ -79,3 +79,4 @@ export function useWakeLock(enabled: boolean) {
 
   return { isActive, requestWakeLock, releaseWakeLock };
 }
+
