@@ -297,19 +297,12 @@ export const QuadrantPane: React.FC<QuadrantPaneProps> = ({
   const isBlank = !pane.url || pane.url === 'about:blank';
   const winNumber = pane.quadrantNumber || 1;
 
-  // Compute effective iframe src with window identifier parameter so storage and sessions partition cleanly
-  let rawIframeSrc =
+  const iframeSrc =
     !isUnrestrictedRuntime && pane.useProxy
       ? `/api/proxy?session=${encodeURIComponent(effectiveSessionKey)}&url=${encodeURIComponent(
           pane.url
         )}`
       : pane.url;
-
-  let finalIframeSrc = rawIframeSrc;
-  if (finalIframeSrc && finalIframeSrc !== 'about:blank' && !finalIframeSrc.includes('_4nav_win=')) {
-    const sep = finalIframeSrc.includes('?') ? '&' : '?';
-    finalIframeSrc = `${finalIframeSrc}${sep}_4nav_win=${winNumber}`;
-  }
 
   const showXfoBanner =
     !isUnrestrictedRuntime && !isBlank && Boolean(pane.frameBlockedReason) && !pane.useProxy && !dismissedWarning;
@@ -406,7 +399,7 @@ export const QuadrantPane: React.FC<QuadrantPaneProps> = ({
             key={`win-${winNumber}-${effectiveSessionKey}-${pane.useProxy ? 'proxy' : 'direct'}-${pane.reloadCounter}`}
             name={`4nav_pane_${winNumber}`}
             id={`4nav_pane_${winNumber}`}
-            src={finalIframeSrc}
+            src={iframeSrc}
             title={`Janela ${winNumber} (${pane.title})`}
             onLoad={() => {
               onUpdatePane((p) => ({ ...p, isLoading: false, frameBlockedReason: null }));
