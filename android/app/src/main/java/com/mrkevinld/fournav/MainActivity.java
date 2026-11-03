@@ -331,29 +331,56 @@ public class MainActivity extends BridgeActivity {
                     // Expunge service worker registration script inside the iframe so it never bypasses the client
                     html = html.replaceAll("(?i)<script[^>]*registrar-sw[^>]*></script>", "");
 
-                    String baseHref = urlStr.endsWith("/") ? urlStr : urlStr + "/";
+                    // Clean baseHref to never contain query parameters (e.g. ?app=ONLINE) or hash fragments
+                    String cleanUrl = urlStr;
+                    int qIdx = cleanUrl.indexOf('?');
+                    if (qIdx >= 0) {
+                        cleanUrl = cleanUrl.substring(0, qIdx);
+                    }
+                    int hIdx = cleanUrl.indexOf('#');
+                    if (hIdx >= 0) {
+                        cleanUrl = cleanUrl.substring(0, hIdx);
+                    }
+                    String baseHref = cleanUrl.endsWith("/") ? cleanUrl : cleanUrl + "/";
+
+                    String roConfigPreload = "";
+                    if (urlStr.toLowerCase(Locale.ROOT).contains("roclassicidle")) {
+                        roConfigPreload = "try {"
+                                + "window.ROConfigLocal = window.ROConfigLocal || {"
+                                + "cadastroUrl: 'https://api.roclassicidle.com.br',"
+                                + "enableHudAdaptavel: true,"
+                                + "remoteClient: 'https://assets.roclassicidle.com.br/',"
+                                + "servers: [{"
+                                + "display: 'Rag Idle — v0 de teste',"
+                                + "desc: 'cadastre-se com _M ou _F no fim do usuario',"
+                                + "address: '127.0.0.1',"
+                                + "port: 6900,"
+                                + "packetver: 20211103,"
+                                + "renewal: true,"
+                                + "version: 55,"
+                                + "langtype: 12,"
+                                + "packetKeys: false,"
+                                + "socketProxy: 'wss://ws.roclassicidle.com.br',"
+                                + "remoteClient: 'https://assets.roclassicidle.com.br/',"
+                                + "worldMapSettings: { episode: 21 },"
+                                + "adminList: []"
+                                + "}],"
+                                + "skipIntro: true,"
+                                + "skipServerList: true,"
+                                + "loadLua: false,"
+                                + "packetDump: false,"
+                                + "development: false"
+                                + "};"
+                                + "} catch(e) {}";
+                    }
+
                     String injectedHead = "<head><base href=\"" + baseHref + "\"><script>"
                             + "try { var p=Object.getPrototypeOf(window);"
                             + "Object.defineProperty(p,'top',{get:function(){return window;},configurable:true});"
                             + "Object.defineProperty(p,'parent',{get:function(){return window;},configurable:true}); } catch(e){}"
                             + "try { Object.defineProperty(window,'top',{get:function(){return window;},configurable:true});"
                             + "Object.defineProperty(window,'parent',{get:function(){return window;},configurable:true}); } catch(e){}"
-                            + "(function(){"
-                            + "function kick(){"
-                            + "try{window.postMessage({application:1,type:3},'*');}catch(e){}"
-                            + "try{window.postMessage({application:'ONLINE',type:3},'*');}catch(e){}"
-                            + "}"
-                            + "kick();"
-                            + "if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',kick);}"
-                            + "window.addEventListener('load',kick);"
-                            + "var count=0;"
-                            + "var t=setInterval(function(){"
-                            + "count++;"
-                            + "var pl=document.getElementById('ro-preloader');"
-                            + "if(!pl||count>150){clearInterval(t);return;}"
-                            + "kick();"
-                            + "},100);"
-                            + "})();"
+                            + roConfigPreload
                             + "</script>";
 
                     if (html.contains("<head>")) {
