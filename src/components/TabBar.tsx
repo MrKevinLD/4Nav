@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Plus,
   X,
@@ -8,6 +8,7 @@ import {
   SquaresFour,
   ArrowsInLineHorizontal,
   Gear,
+  CaretUp,
 } from '@phosphor-icons/react';
 import type { BrowserTab } from '../types/browser.types';
 import { getDisplayHost, GRID_PRESETS } from '../utils/url.utils';
@@ -19,6 +20,8 @@ interface TabBarProps {
   splitX?: number;
   splitY?: number;
   maximizedPane?: string | null;
+  isVisible?: boolean;
+  onHide?: () => void;
   onSelectTab: (tabId: string) => void;
   onAddTab: () => void;
   onAddPane: () => void;
@@ -38,6 +41,8 @@ export const TabBar: React.FC<TabBarProps> = ({
   splitX = 50,
   splitY = 50,
   maximizedPane = null,
+  isVisible = true,
+  onHide,
   onSelectTab,
   onAddTab,
   onAddPane,
@@ -55,6 +60,21 @@ export const TabBar: React.FC<TabBarProps> = ({
   const [editingTitle, setEditingTitle] = useState('');
   const [presetMenuOpen, setPresetMenuOpen] = useState(false);
   const [sessionToast, setSessionToast] = useState<string | null>(null);
+  const touchStartY = useRef<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartY.current !== null) {
+      const deltaY = touchStartY.current - e.changedTouches[0].clientY;
+      if (deltaY > 15 && onHide) {
+        onHide();
+      }
+      touchStartY.current = null;
+    }
+  };
 
   const activeTab = tabs.find((t) => t.id === activeTabId) || tabs[0];
 
@@ -92,9 +112,13 @@ export const TabBar: React.FC<TabBarProps> = ({
 
   return (
     <header
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
       className={`${
         isMobile ? 'h-[32px] px-1.5' : 'h-[40px] px-2'
-      } bg-[#090A0C] border-b border-[#232832] flex items-center justify-between select-none shrink-0 z-30 relative`}
+      } bg-[#090A0C] border-b border-[#232832] flex items-center justify-between select-none shrink-0 z-30 relative transition-all duration-300 ease-in-out ${
+        isVisible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'
+      }`}
     >
       {/* Left: Brand Identity + Tab Strip */}
       <div className="flex items-center gap-1.5 flex-1 min-w-0 overflow-x-auto no-scrollbar pr-1.5">
@@ -407,6 +431,19 @@ export const TabBar: React.FC<TabBarProps> = ({
           <Gear size={13} className="text-[#10B981]" weight="bold" />
           <span className="hidden sm:inline">Configurações</span>
         </button>
+
+        {/* Mobile Hide Top Bar Button */}
+        {isMobile && onHide && (
+          <button
+            type="button"
+            onClick={onHide}
+            title="Esconder barra de abas (ou deslize o dedo para cima)"
+            aria-label="Esconder barra de abas"
+            className="w-[24px] h-[24px] flex items-center justify-center rounded-[2px] text-[#9CA3AF] hover:text-[#10B981] bg-[#111317] border border-[#232832] transition-colors cursor-pointer shrink-0"
+          >
+            <CaretUp size={13} weight="bold" />
+          </button>
+        )}
       </div>
     </header>
   );

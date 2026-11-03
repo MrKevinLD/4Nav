@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { CaretDown } from '@phosphor-icons/react';
 import { useBrowserState } from './hooks/useBrowserState';
 import { useSettings } from './hooks/useSettings';
 import { useMobileView } from './hooks/useMobileView';
@@ -43,6 +44,22 @@ export const App: React.FC = () => {
   const { isMobile, isPortrait } = useMobileView();
   const [isDualSplit, setIsDualSplit] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isTopBarVisible, setIsTopBarVisible] = useState(true);
+  const edgeTouchStartY = useRef<number | null>(null);
+
+  const handleEdgeTouchStart = (e: React.TouchEvent) => {
+    edgeTouchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleEdgeTouchEnd = (e: React.TouchEvent) => {
+    if (edgeTouchStartY.current !== null) {
+      const deltaY = e.changedTouches[0].clientY - edgeTouchStartY.current;
+      if (deltaY > 15) {
+        setIsTopBarVisible(true);
+      }
+      edgeTouchStartY.current = null;
+    }
+  };
 
   // Keep screen awake while 4Nav is active (configurable for idle gaming)
   useWakeLock(settings.keepScreenAwake);
@@ -138,16 +155,34 @@ export const App: React.FC = () => {
 
   return (
     <div
-      className={`w-screen h-[100dvh] bg-[#090A0C] text-[#F3F4F6] flex flex-col overflow-hidden ${
+      className={`w-screen h-[100dvh] bg-[#090A0C] text-[#F3F4F6] flex flex-col overflow-hidden relative ${
         settings.enableEcoBatteryMode ? 'mobile-eco-mode' : ''
       }`}
     >
+      {/* Discreet pull-down tab when Top Bar is hidden on mobile */}
+      {!isTopBarVisible && (
+        <div
+          onTouchStart={handleEdgeTouchStart}
+          onTouchEnd={handleEdgeTouchEnd}
+          onClick={() => setIsTopBarVisible(true)}
+          title="Toque ou deslize para baixo para exibir o menu"
+          className="fixed top-0 left-0 right-0 h-6 z-50 flex justify-center items-start cursor-pointer select-none"
+        >
+          <div className="flex items-center gap-1 px-3 py-0.5 bg-[#090A0C]/90 hover:bg-[#111317] border-b border-x border-[#10B981]/50 rounded-b-md shadow-lg backdrop-blur text-[#10B981] text-[10px] font-mono animate-pulse hover:animate-none transition-all">
+            <CaretDown size={11} weight="bold" />
+            <span className="text-[9px] font-bold tracking-wider">MENU</span>
+          </div>
+        </div>
+      )}
+
       <TabBar
         tabs={tabs}
         activeTabId={activeTabId}
         splitX={currentTab.splitX}
         splitY={currentTab.splitY}
         maximizedPane={currentTab.maximizedPane}
+        isVisible={isTopBarVisible}
+        onHide={() => setIsTopBarVisible(false)}
         onSelectTab={setActiveTabId}
         onAddTab={() => addTab()}
         onAddPane={() => addPane(currentTab.id, settings.defaultNewPaneUrl)}
@@ -173,14 +208,18 @@ export const App: React.FC = () => {
 
       {/* Main Grid Viewport for Active Tab */}
       <div
-        className={`relative flex-1 w-full overflow-hidden ${
+        className={`relative flex-1 w-full overflow-hidden transition-all duration-300 ease-in-out ${
           showMobileBottomBar
+            ? isTopBarVisible
+              ? isMobile
+                ? 'h-[calc(100dvh-32px-56px)]'
+                : 'h-[calc(100dvh-40px-56px)]'
+              : 'h-[calc(100dvh-56px)]'
+            : isTopBarVisible
             ? isMobile
-              ? 'h-[calc(100dvh-32px-56px)]'
-              : 'h-[calc(100dvh-40px-56px)]'
-            : isMobile
-            ? 'h-[calc(100dvh-32px)]'
-            : 'h-[calc(100dvh-40px)]'
+              ? 'h-[calc(100dvh-32px)]'
+              : 'h-[calc(100dvh-40px)]'
+            : 'h-[100dvh]'
         }`}
       >
         {tabs.map((tab) => {
