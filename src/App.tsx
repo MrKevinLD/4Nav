@@ -47,6 +47,17 @@ export const App: React.FC = () => {
   // Keep screen awake while 4Nav is active (configurable for idle gaming)
   useWakeLock(settings.keepScreenAwake);
 
+  // Unregister any rogue Service Worker so native OkHttp interceptor handles all frame requests
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then((registrations) => {
+        for (const registration of registrations) {
+          registration.unregister().catch(() => {});
+        }
+      }).catch(() => {});
+    }
+  }, []);
+
   // Global keyboard shortcuts (Ctrl+T, Ctrl+W, Escape, and Configurable Window Maximization Shortcuts)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

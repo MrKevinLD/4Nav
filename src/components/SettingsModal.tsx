@@ -14,6 +14,7 @@ import {
   DeviceMobile,
   ArrowsInSimple,
   ArrowCounterClockwise,
+  Pulse,
 } from '@phosphor-icons/react';
 import type { AppSettings } from '../types/browser.types';
 import { useMobileView } from '../hooks/useMobileView';
@@ -46,8 +47,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [ramCleanedToast, setRamCleanedToast] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [recordedKey, setRecordedKey] = useState('');
+  const [systemLogs, setSystemLogs] = useState<string[] | null>(null);
 
   if (!isOpen) return null;
+
+  const handleLoadLogs = () => {
+    try {
+      const bridge = (window as any).AndroidBridge;
+      if (bridge && typeof bridge.getRecentLogs === 'function') {
+        const raw = bridge.getRecentLogs();
+        const parsed = JSON.parse(raw);
+        setSystemLogs(Array.isArray(parsed) ? parsed : [String(parsed)]);
+      } else {
+        setSystemLogs(['[Info] AndroidBridge não disponível nesta plataforma (modo web).']);
+      }
+    } catch (e: any) {
+      setSystemLogs([`Erro ao obter logs: ${e.message}`]);
+    }
+  };
 
   const handleCleanRam = async () => {
     try {
@@ -218,6 +235,42 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   />
                   <div className="w-10 h-5 bg-[#232832] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#10B981]" />
                 </label>
+              </div>
+
+              {/* Diagnóstico de Rede & Logs do Sistema */}
+              <div className="p-3 bg-[#181B21] border border-[#232832] rounded-[2px] flex flex-col gap-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="space-y-0.5">
+                    <span className="text-[12px] font-bold text-[#F3F4F6] flex items-center gap-1.5">
+                      <Pulse size={15} className="text-[#10B981]" weight="bold" />
+                      Diagnóstico de Conexão & Logs Mobile
+                    </span>
+                    <p className="text-[11px] text-[#9CA3AF]">
+                      Exibe em tempo real as interceptações do OkHttp, remoção de headers XFO/CSP e status da rede nativa.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleLoadLogs}
+                    className="px-2.5 py-1.5 bg-[#232832] hover:bg-[#323846] text-[#F3F4F6] text-[11px] font-semibold rounded-[2px] cursor-pointer transition-colors shrink-0"
+                  >
+                    Ver Logs
+                  </button>
+                </div>
+
+                {systemLogs && (
+                  <div className="mt-1 p-2 bg-[#090A0C] border border-[#232832] rounded-[2px] max-h-40 overflow-y-auto space-y-1 font-mono text-[10px] text-[#9CA3AF]">
+                    {systemLogs.length === 0 ? (
+                      <p className="text-[#6B7280]">Nenhum registro no momento.</p>
+                    ) : (
+                      systemLogs.map((log, i) => (
+                        <div key={i} className="leading-tight text-[#E5E7EB] border-b border-[#181B21] pb-0.5">
+                          {log}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Modo Ultra Leve Global */}
