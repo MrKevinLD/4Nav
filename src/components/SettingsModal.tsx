@@ -18,6 +18,7 @@ import {
 } from '@phosphor-icons/react';
 import type { AppSettings } from '../types/browser.types';
 import { useMobileView } from '../hooks/useMobileView';
+import { Capacitor } from '@capacitor/core';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -43,7 +44,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onClearRamCache,
 }) => {
   const { isMobile } = useMobileView();
+  const showShortcutsTab = !Capacitor.isNativePlatform() && !isMobile;
   const [activeTab, setActiveTab] = useState<SettingsTab>('performance');
+  const effectiveTab = !showShortcutsTab && activeTab === 'shortcuts' ? 'performance' : activeTab;
   const [ramCleanedToast, setRamCleanedToast] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [recordedKey, setRecordedKey] = useState('');
@@ -147,33 +150,35 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 : 'text-[#9CA3AF] hover:text-[#F3F4F6] hover:bg-[#15181F]'
             }`}
           >
-            <Lightning size={14} weight={activeTab === 'performance' ? 'fill' : 'regular'} />
+            <Lightning size={14} weight={effectiveTab === 'performance' ? 'fill' : 'regular'} />
             <span>Otimização & Jogos Idle</span>
           </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveTab('shortcuts')}
-            className={`flex items-center gap-2 px-3 py-1.5 text-[11px] font-medium rounded-[2px] transition-colors cursor-pointer ${
-              activeTab === 'shortcuts'
-                ? 'bg-[#181B21] text-[#10B981] border border-[#10B981]/40'
-                : 'text-[#9CA3AF] hover:text-[#F3F4F6] hover:bg-[#15181F]'
-            }`}
-          >
-            <Keyboard size={14} weight={activeTab === 'shortcuts' ? 'fill' : 'regular'} />
-            <span>Atalhos de Maximizar</span>
-          </button>
+          {showShortcutsTab && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('shortcuts')}
+              className={`flex items-center gap-2 px-3 py-1.5 text-[11px] font-medium rounded-[2px] transition-colors cursor-pointer ${
+                effectiveTab === 'shortcuts'
+                  ? 'bg-[#181B21] text-[#10B981] border border-[#10B981]/40'
+                  : 'text-[#9CA3AF] hover:text-[#F3F4F6] hover:bg-[#15181F]'
+              }`}
+            >
+              <Keyboard size={14} weight={effectiveTab === 'shortcuts' ? 'fill' : 'regular'} />
+              <span>Atalhos de Maximizar</span>
+            </button>
+          )}
 
           <button
             type="button"
             onClick={() => setActiveTab('windows')}
             className={`flex items-center gap-2 px-3 py-1.5 text-[11px] font-medium rounded-[2px] transition-colors cursor-pointer ${
-              activeTab === 'windows'
+              effectiveTab === 'windows'
                 ? 'bg-[#181B21] text-[#10B981] border border-[#10B981]/40'
                 : 'text-[#9CA3AF] hover:text-[#F3F4F6] hover:bg-[#15181F]'
             }`}
           >
-            <GameController size={14} weight={activeTab === 'windows' ? 'fill' : 'regular'} />
+            <GameController size={14} weight={effectiveTab === 'windows' ? 'fill' : 'regular'} />
             <span>Telas & Inicialização</span>
           </button>
         </div>
@@ -181,7 +186,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         {/* Content Body */}
         <div className="p-5 flex-1 overflow-y-auto space-y-4 no-scrollbar">
           {/* TAB 1: OTIMIZAÇÃO & PERFORMANCE IDLE */}
-          {activeTab === 'performance' && (
+          {effectiveTab === 'performance' && (
             <div className="space-y-4">
               {/* Anti-Bloqueio / Manter Tela Sempre Ligada */}
               <div className="p-3 bg-[#181B21] border border-[#232832] rounded-[2px] flex items-start justify-between gap-4">
@@ -385,8 +390,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           )}
 
-          {/* TAB 2: ATALHOS PARA MAXIMIZAR JANELAS */}
-          {activeTab === 'shortcuts' && (
+          {/* TAB 2: ATALHOS PARA MAXIMIZAR JANELAS (Desktop apenas) */}
+          {showShortcutsTab && effectiveTab === 'shortcuts' && (
             <div className="space-y-4">
               {isMobile && (
                 <div className="p-3 bg-[#10B981]/10 border border-[#10B981]/30 rounded-[2px] flex items-center gap-2.5 text-[#10B981]">
@@ -498,7 +503,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           )}
 
           {/* TAB 3: TELAS & INICIALIZAÇÃO */}
-          {activeTab === 'windows' && (
+          {effectiveTab === 'windows' && (
             <div className="space-y-4">
               <div className="p-3 bg-[#181B21] border border-[#232832] rounded-[2px] space-y-2">
                 <div className="flex items-center gap-2">

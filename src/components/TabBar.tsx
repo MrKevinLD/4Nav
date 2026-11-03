@@ -55,7 +55,7 @@ export const TabBar: React.FC<TabBarProps> = ({
   onApplyPreset,
   onOpenSettings,
 }) => {
-  const { isMobile } = useMobileView();
+  const { isMobile, isPortrait } = useMobileView();
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
   const [presetMenuOpen, setPresetMenuOpen] = useState(false);
@@ -301,10 +301,10 @@ export const TabBar: React.FC<TabBarProps> = ({
               <>
                 <button
                   type="button"
-                  onClick={() => onSetSplit(50, splitY)}
+                  onClick={() => (isPortrait ? onSetSplit(splitX, 50) : onSetSplit(50, splitY))}
                   title="Divisão 50% / 50% (Equilibrado)"
                   className={`px-1.5 py-0.5 text-[9px] font-mono rounded-[2px] transition-colors cursor-pointer ${
-                    Math.round(splitX) === 50
+                    Math.round(isPortrait ? splitY : splitX) === 50
                       ? 'bg-[#10B981] text-[#090A0C] font-bold'
                       : 'text-[#9CA3AF] hover:text-[#F3F4F6] hover:bg-[#181B21]'
                   }`}
@@ -313,10 +313,10 @@ export const TabBar: React.FC<TabBarProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => onSetSplit(70, splitY)}
-                  title="Divisão 70% / 30% (Foco Esquerda)"
+                  onClick={() => (isPortrait ? onSetSplit(splitX, 70) : onSetSplit(70, splitY))}
+                  title={isPortrait ? "Divisão 70% Cima / 30% Baixo" : "Divisão 70% / 30% (Foco Esquerda)"}
                   className={`px-1.5 py-0.5 text-[9px] font-mono rounded-[2px] transition-colors cursor-pointer ${
-                    Math.round(splitX) === 70
+                    Math.round(isPortrait ? splitY : splitX) === 70
                       ? 'bg-[#10B981] text-[#090A0C] font-bold'
                       : 'text-[#9CA3AF] hover:text-[#F3F4F6] hover:bg-[#181B21]'
                   }`}
@@ -325,10 +325,10 @@ export const TabBar: React.FC<TabBarProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => onSetSplit(30, splitY)}
-                  title="Divisão 30% / 70% (Foco Direita)"
+                  onClick={() => (isPortrait ? onSetSplit(splitX, 30) : onSetSplit(30, splitY))}
+                  title={isPortrait ? "Divisão 30% Cima / 70% Baixo" : "Divisão 30% / 70% (Foco Direita)"}
                   className={`px-1.5 py-0.5 text-[9px] font-mono rounded-[2px] transition-colors cursor-pointer ${
-                    Math.round(splitX) === 30
+                    Math.round(isPortrait ? splitY : splitX) === 30
                       ? 'bg-[#10B981] text-[#090A0C] font-bold'
                       : 'text-[#9CA3AF] hover:text-[#F3F4F6] hover:bg-[#181B21]'
                   }`}

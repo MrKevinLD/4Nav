@@ -152,6 +152,10 @@ export const App: React.FC = () => {
   if (!currentTab) return null;
 
   const showMobileBottomBar = isMobile && isPortrait;
+  const currentPaneIds =
+    currentTab.paneOrder && currentTab.paneOrder.length > 0
+      ? currentTab.paneOrder
+      : Object.keys(currentTab.panes);
 
   return (
     <div
@@ -159,17 +163,70 @@ export const App: React.FC = () => {
         settings.enableEcoBatteryMode ? 'mobile-eco-mode' : ''
       }`}
     >
-      {/* Discreet pull-down tab when in Full Immersive Mode */}
+      {/* Immersive Mode Floating Control Bar with Fast Maximizers */}
       {isImmersiveMode && (
         <div
           onTouchStart={handleEdgeTouchStart}
           onTouchEnd={handleEdgeTouchEnd}
-          onClick={() => setIsImmersiveMode(false)}
-          title="Toque ou deslize para baixo para restaurar as barras"
-          className="fixed top-0 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1.5 px-3 py-1 bg-[#090A0C]/90 hover:bg-[#111317] border-b border-x border-[#10B981]/50 rounded-b-md shadow-2xl backdrop-blur text-[#10B981] text-[10px] font-mono cursor-pointer transition-all active:scale-95 group select-none"
+          className="fixed top-0 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1 px-2.5 py-1 bg-[#090A0C]/90 hover:bg-[#111317] border-b border-x border-[#10B981]/50 rounded-b-md shadow-2xl backdrop-blur select-none transition-all"
         >
-          <CaretDown size={11} weight="bold" className="group-hover:translate-y-0.5 transition-transform" />
-          <span className="text-[9px] font-bold tracking-wider">MOSTRAR BARRAS</span>
+          {/* Quick Maximizers for Each Window */}
+          {currentPaneIds.length > 1 && (
+            <div className="flex items-center gap-1 pr-1.5 border-r border-[#232832]">
+              {currentPaneIds.map((paneId, idx) => {
+                const paneNum = idx + 1;
+                const isMax = currentTab.maximizedPane === paneId;
+                return (
+                  <button
+                    key={paneId}
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleMaximizePane(currentTab.id, paneId);
+                    }}
+                    title={isMax ? `Restaurar Janela ${paneNum} (Divisão)` : `Maximizar Janela ${paneNum}`}
+                    aria-label={`Maximizar Janela ${paneNum}`}
+                    className={`px-2 py-0.5 text-[10px] font-mono font-bold rounded-[2px] transition-all cursor-pointer flex items-center gap-1 ${
+                      isMax
+                        ? 'bg-[#10B981] text-[#090A0C] shadow-sm'
+                        : 'bg-[#181B21] text-[#9CA3AF] hover:text-[#F3F4F6] hover:bg-[#232832] border border-[#232832]'
+                    }`}
+                  >
+                    <span>J{paneNum}</span>
+                    {isMax && <span className="text-[9px]">⛶</span>}
+                  </button>
+                );
+              })}
+
+              {/* Quick Restore to Split View when a pane is maximized */}
+              {currentTab.maximizedPane && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleMaximizePane(currentTab.id, currentTab.maximizedPane!);
+                  }}
+                  title="Restaurar divisão de janelas"
+                  aria-label="Restaurar divisão"
+                  className="px-2 py-0.5 bg-[#181B21] hover:bg-[#232832] text-[#10B981] border border-[#10B981]/40 rounded-[2px] text-[10px] font-mono font-bold transition-all cursor-pointer"
+                >
+                  Dividir
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Restore All Bars Button */}
+          <button
+            type="button"
+            onClick={() => setIsImmersiveMode(false)}
+            title="Toque para restaurar todas as barras (ou deslize para baixo)"
+            aria-label="Mostrar barras de navegação"
+            className="flex items-center gap-1 pl-1 text-[#10B981] text-[10px] font-mono font-bold cursor-pointer group hover:text-[#34D399] transition-colors"
+          >
+            <CaretDown size={12} weight="bold" className="group-hover:translate-y-0.5 transition-transform" />
+            <span className="text-[9px] tracking-wider uppercase">Barras</span>
+          </button>
         </div>
       )}
 

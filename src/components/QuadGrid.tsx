@@ -83,7 +83,7 @@ export const QuadGrid: React.FC<QuadGridProps> = ({
     };
   }, [dragAxis, tab.splitX, tab.splitY, onUpdateGridSplit]);
 
-  const { isMobile } = useMobileView();
+  const { isMobile, isPortrait } = useMobileView();
 
   const renderQuadrant = (paneId: string, index: number) => {
     const pane = tab.panes[paneId];
@@ -139,8 +139,9 @@ export const QuadGrid: React.FC<QuadGridProps> = ({
     );
   }
 
-  // 2 Windows Layout: Split column layout with interactive splitter
+  // 2 Windows Layout: Split column (landscape) or row (portrait) layout with interactive splitter
   if (paneCount === 2) {
+    const isVerticalSplit = isPortrait;
     return (
       <main
         ref={containerRef}
@@ -173,23 +174,49 @@ export const QuadGrid: React.FC<QuadGridProps> = ({
             height: '100%',
             gridTemplateColumns: maximizedPane
               ? '1fr'
+              : isVerticalSplit
+              ? '1fr'
               : `${splitX}% 4px calc(${100 - splitX}% - 4px)`,
-            gridTemplateRows: '1fr',
+            gridTemplateRows: maximizedPane
+              ? '1fr'
+              : isVerticalSplit
+              ? `${splitY}% 4px calc(${100 - splitY}% - 4px)`
+              : '1fr',
           }}
         >
           {renderQuadrant(paneIds[0], 0)}
 
           {!maximizedPane && (
             <div
-              onPointerDown={() => setDragAxis('x')}
-              onDoubleClick={() => onUpdateGridSplit(50, splitY)}
-              title="Arraste para redimensionar (Duplo-clique para 50%)"
-              className="relative w-full h-full bg-[#111317] hover:bg-[#10B981] active:bg-[#10B981] cursor-col-resize transition-colors z-30 group select-none"
+              onPointerDown={() => setDragAxis(isVerticalSplit ? 'y' : 'x')}
+              onDoubleClick={() =>
+                onUpdateGridSplit(isVerticalSplit ? splitX : 50, isVerticalSplit ? 50 : splitY)
+              }
+              title={
+                isVerticalSplit
+                  ? 'Arraste para redimensionar verticalmente (Duplo-clique para 50%)'
+                  : 'Arraste para redimensionar (Duplo-clique para 50%)'
+              }
+              className={`relative w-full h-full bg-[#111317] hover:bg-[#10B981] active:bg-[#10B981] transition-colors z-30 group select-none ${
+                isVerticalSplit ? 'cursor-row-resize' : 'cursor-col-resize'
+              }`}
             >
               {/* Expanded touch target for fingers on mobile */}
-              <div className="absolute inset-y-0 -left-3 -right-3 z-40 cursor-col-resize" />
+              <div
+                className={`absolute z-40 ${
+                  isVerticalSplit
+                    ? 'inset-x-0 -top-3 -bottom-3 cursor-row-resize'
+                    : 'inset-y-0 -left-3 -right-3 cursor-col-resize'
+                }`}
+              />
               {/* Visual touch drag pill handle */}
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[14px] h-[36px] bg-[#181B21] border border-[#232832] group-hover:border-[#10B981] group-hover:bg-[#10B981]/20 rounded-full flex flex-col items-center justify-center gap-1 shadow-lg pointer-events-none transition-colors">
+              <div
+                className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#181B21] border border-[#232832] group-hover:border-[#10B981] group-hover:bg-[#10B981]/20 rounded-full flex items-center justify-center gap-1 shadow-lg pointer-events-none transition-colors ${
+                  isVerticalSplit
+                    ? 'w-[36px] h-[14px] flex-row'
+                    : 'w-[14px] h-[36px] flex-col'
+                }`}
+              >
                 <div className="w-[3px] h-[3px] rounded-full bg-[#9CA3AF] group-hover:bg-[#10B981]" />
                 <div className="w-[3px] h-[3px] rounded-full bg-[#9CA3AF] group-hover:bg-[#10B981]" />
                 <div className="w-[3px] h-[3px] rounded-full bg-[#9CA3AF] group-hover:bg-[#10B981]" />
@@ -290,8 +317,13 @@ export const QuadGrid: React.FC<QuadGridProps> = ({
   }
 
   // 3 or 5+ Windows: Adaptive Dynamic Multi-Screen Grid
-  const cols = paneCount <= 3 ? 3 : paneCount <= 6 ? 3 : 4;
-  const rows = paneCount <= 3 ? 1 : 2;
+  const isPortraitMode = isPortrait;
+  const cols = isPortraitMode
+    ? (paneCount <= 3 ? 1 : 2)
+    : (paneCount <= 3 ? 3 : paneCount <= 6 ? 3 : 4);
+  const rows = isPortraitMode
+    ? (paneCount <= 3 ? paneCount : Math.ceil(paneCount / 2))
+    : (paneCount <= 3 ? 1 : 2);
 
   return (
     <main
