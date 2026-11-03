@@ -221,6 +221,10 @@ public class MainActivity extends BridgeActivity {
         String path = uri.getPath();
         if (path == null) return false;
         String lower = path.toLowerCase(Locale.ROOT);
+        // Do NOT bypass carregar-jogo - we need to patch its iframe handshake!
+        if (lower.contains("carregar-jogo")) {
+            return false;
+        }
         return lower.endsWith(".js") || lower.endsWith(".mjs")
                 || lower.endsWith(".css")
                 || lower.endsWith(".png") || lower.endsWith(".jpg") || lower.endsWith(".jpeg")
@@ -295,7 +299,26 @@ public class MainActivity extends BridgeActivity {
 
             byte[] bodyBytes = body != null ? body.bytes() : new byte[0];
 
-            // If HTML document, inject <base> tag, disable service workers, and inject frame unblock polyfill
+            // Special handling for carregar-jogo.js: patch iframe detection to prevent infinite loading
+            if (urlStr.contains("carregar-jogo") && bodyBytes.length > 0) {
+                try {
+                    String charsetName = encoding != null && !encoding.isEmpty() ? encoding : "UTF-8";
+                    String js = new String(bodyBytes, charsetName);
+
+                    // 1. Force PAPEL_DA_PAGINA to 'app' rather than 'quadro'
+                    js = js.replace("window.top !== window.self ? 'quadro'", "false ? 'quadro'");
+                    js = js.replace("PAPEL_DA_PAGINA === 'quadro' ? null :", "false ? null :");
+                    js = js.replace("var appName = PAPEL_DA_PAGINA === 'quadro' ? null : APP_DA_URL || 'ONLINE';", "var appName = APP_DA_URL || 'ONLINE';");
+
+                    bodyBytes = js.getBytes(StandardCharsets.UTF_8);
+                    encoding = "utf-8";
+                    logMessage("Patched carregar-jogo.js: neutralized iframe stall & set appName to ONLINE");
+                } catch (Exception e) {
+                    logMessage("carregar-jogo.js patch error: " + e.getMessage());
+                }
+            }
+
+            // If HTML document, inject <base> tag, disable service workers, and inject frame unblock + handshake polyfill
             if (mimeType.toLowerCase(Locale.ROOT).contains("html") && bodyBytes.length > 0) {
                 try {
                     String charsetName = encoding != null && !encoding.isEmpty() ? encoding : "UTF-8";
@@ -315,6 +338,22 @@ public class MainActivity extends BridgeActivity {
                             + "Object.defineProperty(p,'parent',{get:function(){return window;},configurable:true}); } catch(e){}"
                             + "try { Object.defineProperty(window,'top',{get:function(){return window;},configurable:true});"
                             + "Object.defineProperty(window,'parent',{get:function(){return window;},configurable:true}); } catch(e){}"
+                            + "(function(){"
+                            + "function kick(){"
+                            + "try{window.postMessage({application:1,type:3},'*');}catch(e){}"
+                            + "try{window.postMessage({application:'ONLINE',type:3},'*');}catch(e){}"
+                            + "}"
+                            + "kick();"
+                            + "if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',kick);}"
+                            + "window.addEventListener('load',kick);"
+                            + "var count=0;"
+                            + "var t=setInterval(function(){"
+                            + "count++;"
+                            + "var pl=document.getElementById('ro-preloader');"
+                            + "if(!pl||count>150){clearInterval(t);return;}"
+                            + "kick();"
+                            + "},100);"
+                            + "})();"
                             + "</script>";
 
                     if (html.contains("<head>")) {

@@ -29,24 +29,33 @@ export function normalizeAddressInput(rawInput: string): string {
     return trimmed;
   }
 
-  if (/^https?:\/\//i.test(trimmed)) {
-    return trimmed;
+  let result = trimmed;
+  if (/^https?:\/\//i.test(result)) {
+    // Already has protocol
+  } else if (/^(localhost|127\.0\.0\.1|\d{1,3}(\.\d{1,3}){3})(:\d+)?(\/.*)?$/i.test(result)) {
+    result = `http://${result}`;
+  } else {
+    // Looks like a domain name (no spaces, has a dot with a 2+ char TLD)
+    const domainPattern = /^([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(\/.*)?$/;
+    if (!result.includes(' ') && domainPattern.test(result)) {
+      result = `https://${result}`;
+      if (!result.includes('/')) result = `${result}/`;
+    } else {
+      // Otherwise treat as a Google search
+      return `https://www.google.com/search?q=${encodeURIComponent(result)}`;
+    }
   }
 
-  // Localhost or IP address
-  if (/^(localhost|127\.0\.0\.1|\d{1,3}(\.\d{1,3}){3})(:\d+)?(\/.*)?$/i.test(trimmed)) {
-    return `http://${trimmed}`;
+  // RO Classic Idle optimization: ensure ?app=ONLINE so the engine auto-launches inside iframes
+  if (/play\.roclassicidle\.com\.br/i.test(result) && !result.includes('app=')) {
+    result = result.includes('?')
+      ? `${result}&app=ONLINE`
+      : result.endsWith('/')
+      ? `${result}?app=ONLINE`
+      : `${result}/?app=ONLINE`;
   }
 
-  // Looks like a domain name (no spaces, has a dot with a 2+ char TLD)
-  const domainPattern = /^([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(\/.*)?$/;
-  if (!trimmed.includes(' ') && domainPattern.test(trimmed)) {
-    const url = `https://${trimmed}`;
-    return trimmed.includes('/') ? url : `${url}/`;
-  }
-
-  // Otherwise treat as a Google search
-  return `https://www.google.com/search?q=${encodeURIComponent(trimmed)}`;
+  return result;
 }
 
 /**
@@ -93,7 +102,7 @@ export function isKnownFrameRestrictedDomain(url: string): boolean {
 export const QUICK_BOOKMARKS: QuickBookmark[] = [
   {
     title: 'RO Classic Idle',
-    url: 'https://play.roclassicidle.com.br/',
+    url: 'https://play.roclassicidle.com.br/?app=ONLINE',
     category: 'Game • Multi-Conta',
     badgeColor: '#10B981',
   },
@@ -150,10 +159,10 @@ export const GRID_PRESETS: GridPreset[] = [
     name: '4x RO Classic Idle (4 Contas na Mesma Aba)',
     description: 'Abre play.roclassicidle.com.br nos 4 quadrantes simultaneamente',
     urls: {
-      q1: 'https://play.roclassicidle.com.br/',
-      q2: 'https://play.roclassicidle.com.br/',
-      q3: 'https://play.roclassicidle.com.br/',
-      q4: 'https://play.roclassicidle.com.br/',
+      q1: 'https://play.roclassicidle.com.br/?app=ONLINE',
+      q2: 'https://play.roclassicidle.com.br/?app=ONLINE',
+      q3: 'https://play.roclassicidle.com.br/?app=ONLINE',
+      q4: 'https://play.roclassicidle.com.br/?app=ONLINE',
     },
   },
   {
@@ -161,7 +170,7 @@ export const GRID_PRESETS: GridPreset[] = [
     name: 'Setup Principal (RO Idle + Google + YouTube + Livre)',
     description: 'Q1: RO Classic Idle • Q2: Google • Q3: YouTube • Q4: Speed Dial',
     urls: {
-      q1: 'https://play.roclassicidle.com.br/',
+      q1: 'https://play.roclassicidle.com.br/?app=ONLINE',
       q2: 'https://www.google.com',
       q3: 'https://www.youtube.com',
       q4: 'about:blank',

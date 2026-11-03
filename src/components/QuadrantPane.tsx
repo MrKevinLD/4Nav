@@ -395,7 +395,16 @@ export const QuadrantPane: React.FC<QuadrantPaneProps> = ({
             key={`${effectiveSessionKey}-${pane.useProxy ? 'proxy' : 'direct'}-${pane.reloadCounter}`}
             src={iframeSrc}
             title={`Quadrante ${pane.quadrantNumber} (${pane.title})`}
-            onLoad={() => onUpdatePane((p) => ({ ...p, isLoading: false, frameBlockedReason: null }))}
+            onLoad={(e) => {
+              onUpdatePane((p) => ({ ...p, isLoading: false, frameBlockedReason: null }));
+              try {
+                const targetWin = (e.currentTarget as HTMLIFrameElement)?.contentWindow;
+                if (targetWin) {
+                  targetWin.postMessage({ application: 1, type: 3 }, '*');
+                  targetWin.postMessage({ application: 'ONLINE', type: 3 }, '*');
+                }
+              } catch (_) {}
+            }}
             onError={() => {
               if (!isUnrestrictedRuntime) {
                 onUpdatePane((p) => ({

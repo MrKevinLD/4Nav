@@ -527,7 +527,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <button
                     type="button"
                     onClick={() =>
-                      onUpdateSetting('defaultNewPaneUrl', 'https://play.roclassicidle.com.br/')
+                      onUpdateSetting('defaultNewPaneUrl', 'https://play.roclassicidle.com.br/?app=ONLINE')
                     }
                     className="px-2 py-0.5 bg-[#090A0C] hover:bg-[#232832] text-[#10B981] border border-[#232832] text-[10px] font-mono rounded-[2px] cursor-pointer"
                   >
