@@ -1,17 +1,21 @@
 package com.mrkevinld.fournav;
 
 import android.app.AlertDialog;
+import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.text.InputType;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
+import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.inputmethod.EditorInfo;
 import android.webkit.ConsoleMessage;
 import android.webkit.CookieManager;
 import android.webkit.RenderProcessGoneDetail;
@@ -61,6 +65,12 @@ public class MainActivity extends BridgeActivity {
     private FrameLayout nativeDualContainer;
     private WebView nativeWebView1;
     private WebView nativeWebView2;
+    private LinearLayout j1Container;
+    private LinearLayout j2Container;
+    private LinearLayout j1Bar;
+    private EditText j1UrlInput;
+    private LinearLayout j2Bar;
+    private EditText j2UrlInput;
     private View dividerView;
     private LinearLayout nativeHeaderBar;
     private LinearLayout nativeFooterBar;
@@ -69,6 +79,43 @@ public class MainActivity extends BridgeActivity {
     private int currentLayoutMode = 0; // 0 = 50:50 Vertical, 1 = J1, 2 = J2
     private String urlPane1 = "https://play.roclassicidle.com.br/";
     private String urlPane2 = "https://play.roclassicidle.com.br/";
+
+    private static final String PORTRAIT_EMULATION_JS =
+            "(function() {" +
+            "  try {" +
+            "    if (window.screen) {" +
+            "      Object.defineProperty(window.screen, 'orientation', {" +
+            "        get: function() { return { angle: 0, type: 'portrait-primary', onchange: null, lock: function() { return Promise.resolve(); }, unlock: function() {} }; }," +
+            "        configurable: true" +
+            "      });" +
+            "    }" +
+            "    Object.defineProperty(window, 'orientation', { get: function() { return 0; }, configurable: true });" +
+            "    if (window.matchMedia && !window.__4navMatchMediaHooked) {" +
+            "      window.__4navMatchMediaHooked = true;" +
+            "      var _mm = window.matchMedia;" +
+            "      window.matchMedia = function(q) {" +
+            "        var s = String(q || '').toLowerCase();" +
+            "        if (s.indexOf('orientation: landscape') !== -1 || s.indexOf('orientation:landscape') !== -1 || s.indexOf('max-height: 599px') !== -1 || s.indexOf('max-height:599px') !== -1) {" +
+            "          return { matches: false, media: q, onchange: null, addListener: function(){}, removeListener: function(){}, addEventListener: function(){}, removeEventListener: function(){}, dispatchEvent: function(){ return false; } };" +
+            "        }" +
+            "        if (s.indexOf('orientation: portrait') !== -1 || s.indexOf('orientation:portrait') !== -1) {" +
+            "          return { matches: true, media: q, onchange: null, addListener: function(){}, removeListener: function(){}, addEventListener: function(){}, removeEventListener: function(){}, dispatchEvent: function(){ return false; } };" +
+            "        }" +
+            "        return _mm.apply(this, arguments);" +
+            "      };" +
+            "    }" +
+            "    if (!document.getElementById('__4nav_hide_rotate')) {" +
+            "      var st = document.createElement('style');" +
+            "      st.id = '__4nav_hide_rotate';" +
+            "      st.textContent = '#ri-gire-o-celular, [id*=\"gire-o-celular\"] { display: none !important; visibility: hidden !important; pointer-events: none !important; width: 0 !important; height: 0 !important; opacity: 0 !important; }';" +
+            "      (document.head || document.documentElement).appendChild(st);" +
+            "    }" +
+            "    var el = document.getElementById('ri-gire-o-celular');" +
+            "    if (el && el.parentNode) el.parentNode.removeChild(el);" +
+            "    if (!window.ROConfig) window.ROConfig = {};" +
+            "    window.ROConfig.enableHudDeitada = true;" +
+            "  } catch(e) {}" +
+            "})();";
 
     private static final String STANDALONE_SHIM_SCRIPT =
             "<script>" +
@@ -79,7 +126,11 @@ public class MainActivity extends BridgeActivity {
             "    Object.defineProperty(window, 'frameElement', { get: function() { return null; }, configurable: false, enumerable: true });" +
             "  } catch(e) {}" +
             "})();" +
-            "</script>";
+            PORTRAIT_EMULATION_JS +
+            "</script>" +
+            "<style id='__4nav_hide_rotate'>" +
+            "#ri-gire-o-celular, [id*='gire-o-celular'] { display: none !important; visibility: hidden !important; pointer-events: none !important; width: 0 !important; height: 0 !important; opacity: 0 !important; }" +
+            "</style>";
 
     private static final String GHOST_CLEANER_SCRIPT =
             "(function() {" +
@@ -169,6 +220,15 @@ public class MainActivity extends BridgeActivity {
             } catch (Exception e) {
                 logMessage("evaluateJavascript error: " + e.getMessage());
             }
+        });
+    }
+
+    public void injectPortraitEmulation(WebView webView) {
+        if (webView == null) return;
+        runOnUiThread(() -> {
+            try {
+                webView.evaluateJavascript(PORTRAIT_EMULATION_JS, null);
+            } catch (Exception ignored) {}
         });
     }
 
@@ -470,6 +530,124 @@ public class MainActivity extends BridgeActivity {
         return btn;
     }
 
+    private LinearLayout createPaneUrlBar(int paneIndex, String defaultUrl, String badgeText, String badgeTextColor, String badgeStrokeColor) {
+        LinearLayout bar = new LinearLayout(this);
+        bar.setOrientation(LinearLayout.HORIZONTAL);
+        bar.setBackgroundColor(Color.parseColor("#0F131A"));
+        bar.setGravity(Gravity.CENTER_VERTICAL);
+        int padH = dpToPx(6);
+        int padV = dpToPx(4);
+        bar.setPadding(padH, padV, padH, padV);
+        bar.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+        ));
+
+        // Badge J1 / J2
+        TextView badge = new TextView(this);
+        badge.setText(badgeText);
+        badge.setTextColor(Color.parseColor(badgeTextColor));
+        badge.setTypeface(null, Typeface.BOLD);
+        badge.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        badge.setGravity(Gravity.CENTER);
+        badge.setPadding(dpToPx(7), dpToPx(3), dpToPx(7), dpToPx(3));
+        GradientDrawable badgeBg = new GradientDrawable();
+        badgeBg.setColor(Color.parseColor("#171D27"));
+        badgeBg.setStroke(dpToPx(1), Color.parseColor(badgeStrokeColor));
+        badgeBg.setCornerRadius(dpToPx(4));
+        badge.setBackground(badgeBg);
+        bar.addView(badge);
+
+        // URL Input
+        EditText input = new EditText(this);
+        input.setText(defaultUrl);
+        input.setSingleLine(true);
+        input.setMaxLines(1);
+        input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
+        input.setImeOptions(EditorInfo.IME_ACTION_GO);
+        input.setTextColor(Color.parseColor("#E5E7EB"));
+        input.setHint("Digite ou cole a URL...");
+        input.setHintTextColor(Color.parseColor("#4B5563"));
+        input.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        input.setPadding(dpToPx(8), dpToPx(4), dpToPx(8), dpToPx(4));
+
+        GradientDrawable inputBg = new GradientDrawable();
+        inputBg.setColor(Color.parseColor("#141822"));
+        inputBg.setStroke(dpToPx(1), Color.parseColor("#252E3E"));
+        inputBg.setCornerRadius(dpToPx(4));
+        input.setBackground(inputBg);
+
+        LinearLayout.LayoutParams inputParams = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
+        inputParams.leftMargin = dpToPx(5);
+        inputParams.rightMargin = dpToPx(4);
+        input.setLayoutParams(inputParams);
+
+        if (paneIndex == 1) {
+            j1UrlInput = input;
+        } else {
+            j2UrlInput = input;
+        }
+
+        input.setOnEditorActionListener((v, actionId, event) -> {
+            if (actionId == EditorInfo.IME_ACTION_GO || (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER)) {
+                navigateToUrl(paneIndex, input.getText().toString());
+                return true;
+            }
+            return false;
+        });
+        bar.addView(input);
+
+        // Go button
+        TextView btnGo = createStyledButton("Ir", "#FFFFFF", badgeStrokeColor, () -> {
+            navigateToUrl(paneIndex, input.getText().toString());
+        });
+        bar.addView(btnGo);
+
+        // Reload button
+        TextView btnReload = createStyledButton("🔄", "#9CA3AF", "#1B202A", () -> {
+            if (paneIndex == 1 && nativeWebView1 != null) nativeWebView1.reload();
+            if (paneIndex == 2 && nativeWebView2 != null) nativeWebView2.reload();
+        });
+        bar.addView(btnReload);
+
+        return bar;
+    }
+
+    private void navigateToUrl(int pane, String rawUrl) {
+        if (rawUrl == null) return;
+        String cleanUrl = rawUrl.trim();
+        if (cleanUrl.isEmpty()) return;
+        if (!cleanUrl.startsWith("http://") && !cleanUrl.startsWith("https://")) {
+            cleanUrl = "https://" + cleanUrl;
+        }
+        if (pane == 1) {
+            urlPane1 = cleanUrl;
+            if (j1UrlInput != null) j1UrlInput.setText(cleanUrl);
+            if (nativeWebView1 != null) nativeWebView1.loadUrl(cleanUrl);
+        } else if (pane == 2) {
+            urlPane2 = cleanUrl;
+            if (j2UrlInput != null) j2UrlInput.setText(cleanUrl);
+            if (nativeWebView2 != null) nativeWebView2.loadUrl(cleanUrl);
+        }
+    }
+
+    public void updateUrlInputFromPage(WebView view, String url) {
+        if (url == null || url.isEmpty() || url.startsWith("about:") || url.startsWith("javascript:")) return;
+        runOnUiThread(() -> {
+            if (view == nativeWebView1) {
+                urlPane1 = url;
+                if (j1UrlInput != null && !j1UrlInput.hasFocus()) {
+                    j1UrlInput.setText(url);
+                }
+            } else if (view == nativeWebView2) {
+                urlPane2 = url;
+                if (j2UrlInput != null && !j2UrlInput.hasFocus()) {
+                    j2UrlInput.setText(url);
+                }
+            }
+        });
+    }
+
     private void setupNativeDualWebViews() {
         if (nativeDualContainer != null) return;
 
@@ -523,7 +701,7 @@ public class MainActivity extends BridgeActivity {
 
             mainLayout.addView(nativeHeaderBar);
 
-            // 2. DUAL SPLIT WEBVIEWS
+            // 2. DUAL SPLIT WEBVIEWS (Each with dedicated URL bar)
             LinearLayout splitArea = new LinearLayout(this);
             splitArea.setOrientation(LinearLayout.VERTICAL);
             splitArea.setLayoutParams(new LinearLayout.LayoutParams(
@@ -531,6 +709,17 @@ public class MainActivity extends BridgeActivity {
                     0,
                     1.0f
             ));
+
+            // J1 Container (URL Bar + WebView 1)
+            j1Container = new LinearLayout(this);
+            j1Container.setOrientation(LinearLayout.VERTICAL);
+            j1Container.setLayoutParams(new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    0,
+                    1.0f
+            ));
+            j1Bar = createPaneUrlBar(1, urlPane1, "J1", "#60A5FA", "#2563EB");
+            j1Container.addView(j1Bar);
 
             nativeWebView1 = new WebView(this);
             nativeWebView1.setLayoutParams(new LinearLayout.LayoutParams(
@@ -541,13 +730,26 @@ public class MainActivity extends BridgeActivity {
             configureChildWebSettings(nativeWebView1);
             nativeWebView1.setWebViewClient(new FourNavChildWebViewClient(this));
             nativeWebView1.setWebChromeClient(new WebChromeClient());
+            j1Container.addView(nativeWebView1);
 
+            // Divider
             dividerView = new View(this);
             dividerView.setLayoutParams(new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     dpToPx(2)
             ));
             dividerView.setBackgroundColor(Color.parseColor("#232832"));
+
+            // J2 Container (URL Bar + WebView 2)
+            j2Container = new LinearLayout(this);
+            j2Container.setOrientation(LinearLayout.VERTICAL);
+            j2Container.setLayoutParams(new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    0,
+                    1.0f
+            ));
+            j2Bar = createPaneUrlBar(2, urlPane2, "J2", "#34D399", "#059669");
+            j2Container.addView(j2Bar);
 
             nativeWebView2 = new WebView(this);
             nativeWebView2.setLayoutParams(new LinearLayout.LayoutParams(
@@ -558,10 +760,11 @@ public class MainActivity extends BridgeActivity {
             configureChildWebSettings(nativeWebView2);
             nativeWebView2.setWebViewClient(new FourNavChildWebViewClient(this));
             nativeWebView2.setWebChromeClient(new WebChromeClient());
+            j2Container.addView(nativeWebView2);
 
-            splitArea.addView(nativeWebView1);
+            splitArea.addView(j1Container);
             splitArea.addView(dividerView);
-            splitArea.addView(nativeWebView2);
+            splitArea.addView(j2Container);
 
             mainLayout.addView(splitArea);
 
@@ -576,29 +779,25 @@ public class MainActivity extends BridgeActivity {
                     ViewGroup.LayoutParams.WRAP_CONTENT
             ));
 
-            TextView btnReloadJ1 = createStyledButton("🔄 J1", "#9CA3AF", "#15181F", () -> {
-                if (nativeWebView1 != null) nativeWebView1.reload();
-            });
-            TextView btnReloadJ2 = createStyledButton("🔄 J2", "#9CA3AF", "#15181F", () -> {
-                if (nativeWebView2 != null) nativeWebView2.reload();
-            });
-
-            View footerSpacer = new View(this);
-            footerSpacer.setLayoutParams(new LinearLayout.LayoutParams(0, 0, 1.0f));
-
             TextView statusWake = new TextView(this);
             statusWake.setText("⚡ 60 FPS • WakeLock");
             statusWake.setTextColor(Color.parseColor("#EAB308"));
             statusWake.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
             statusWake.setPadding(dpToPx(4), dpToPx(2), dpToPx(4), dpToPx(2));
 
-            TextView btnUrl = createStyledButton("🔗 URL", "#3B82F6", "#15181F", this::promptChangeUrl);
+            View footerSpacer = new View(this);
+            footerSpacer.setLayoutParams(new LinearLayout.LayoutParams(0, 0, 1.0f));
+
+            TextView btnClearMem = createStyledButton("🧹 Limpar", "#9CA3AF", "#15181F", () -> {
+                CookieManager.getInstance().flush();
+                System.gc();
+            });
+            TextView btnUrl = createStyledButton("🔗 URL Modal", "#3B82F6", "#15181F", this::promptChangeUrl);
             TextView btnWeb = createStyledButton("🏠 Web", "#9CA3AF", "#15181F", this::toggleNativeDualMode);
 
-            nativeFooterBar.addView(btnReloadJ1);
-            nativeFooterBar.addView(btnReloadJ2);
-            nativeFooterBar.addView(footerSpacer);
             nativeFooterBar.addView(statusWake);
+            nativeFooterBar.addView(footerSpacer);
+            nativeFooterBar.addView(btnClearMem);
             nativeFooterBar.addView(btnUrl);
             nativeFooterBar.addView(btnWeb);
 
@@ -633,38 +832,38 @@ public class MainActivity extends BridgeActivity {
             // Load initial URLs
             nativeWebView1.loadUrl(urlPane1);
             nativeWebView2.loadUrl(urlPane2);
-            logMessage("Native Dual WebViews initialized and mounted successfully!");
+            logMessage("Native Dual WebViews with individual URL bars mounted successfully!");
         });
     }
 
     private void switchToLayoutMode(int mode) {
         currentLayoutMode = mode;
-        if (nativeWebView1 == null || nativeWebView2 == null || dividerView == null) return;
+        if (j1Container == null || j2Container == null || dividerView == null) return;
 
         if (mode == 0) { // 50:50 Vertical Split
-            nativeWebView1.setVisibility(View.VISIBLE);
-            nativeWebView2.setVisibility(View.VISIBLE);
+            j1Container.setVisibility(View.VISIBLE);
+            j2Container.setVisibility(View.VISIBLE);
             dividerView.setVisibility(View.VISIBLE);
-            LinearLayout.LayoutParams p1 = (LinearLayout.LayoutParams) nativeWebView1.getLayoutParams();
+            LinearLayout.LayoutParams p1 = (LinearLayout.LayoutParams) j1Container.getLayoutParams();
             p1.weight = 1.0f;
-            nativeWebView1.setLayoutParams(p1);
-            LinearLayout.LayoutParams p2 = (LinearLayout.LayoutParams) nativeWebView2.getLayoutParams();
+            j1Container.setLayoutParams(p1);
+            LinearLayout.LayoutParams p2 = (LinearLayout.LayoutParams) j2Container.getLayoutParams();
             p2.weight = 1.0f;
-            nativeWebView2.setLayoutParams(p2);
+            j2Container.setLayoutParams(p2);
         } else if (mode == 1) { // J1 Maximized
-            nativeWebView1.setVisibility(View.VISIBLE);
-            nativeWebView2.setVisibility(View.GONE);
+            j1Container.setVisibility(View.VISIBLE);
+            j2Container.setVisibility(View.GONE);
             dividerView.setVisibility(View.GONE);
-            LinearLayout.LayoutParams p1 = (LinearLayout.LayoutParams) nativeWebView1.getLayoutParams();
+            LinearLayout.LayoutParams p1 = (LinearLayout.LayoutParams) j1Container.getLayoutParams();
             p1.weight = 1.0f;
-            nativeWebView1.setLayoutParams(p1);
+            j1Container.setLayoutParams(p1);
         } else if (mode == 2) { // J2 Maximized
-            nativeWebView1.setVisibility(View.GONE);
-            nativeWebView2.setVisibility(View.VISIBLE);
+            j1Container.setVisibility(View.GONE);
+            j2Container.setVisibility(View.VISIBLE);
             dividerView.setVisibility(View.GONE);
-            LinearLayout.LayoutParams p2 = (LinearLayout.LayoutParams) nativeWebView2.getLayoutParams();
+            LinearLayout.LayoutParams p2 = (LinearLayout.LayoutParams) j2Container.getLayoutParams();
             p2.weight = 1.0f;
-            nativeWebView2.setLayoutParams(p2);
+            j2Container.setLayoutParams(p2);
         }
     }
 
@@ -672,6 +871,8 @@ public class MainActivity extends BridgeActivity {
         nativeBarsVisible = !nativeBarsVisible;
         int vis = nativeBarsVisible ? View.VISIBLE : View.GONE;
         if (nativeHeaderBar != null) nativeHeaderBar.setVisibility(vis);
+        if (j1Bar != null) j1Bar.setVisibility(vis);
+        if (j2Bar != null) j2Bar.setVisibility(vis);
         if (nativeFooterBar != null) nativeFooterBar.setVisibility(vis);
         if (floatingRestoreBtn != null) floatingRestoreBtn.setVisibility(nativeBarsVisible ? View.GONE : View.VISIBLE);
     }
@@ -702,24 +903,10 @@ public class MainActivity extends BridgeActivity {
 
         builder.setView(layout);
         builder.setPositiveButton("Carregar no J1", (dialog, which) -> {
-            String newUrl = input.getText().toString().trim();
-            if (!newUrl.isEmpty()) {
-                if (!newUrl.startsWith("http://") && !newUrl.startsWith("https://")) {
-                    newUrl = "https://" + newUrl;
-                }
-                urlPane1 = newUrl;
-                if (nativeWebView1 != null) nativeWebView1.loadUrl(newUrl);
-            }
+            navigateToUrl(1, input.getText().toString());
         });
         builder.setNegativeButton("Carregar no J2", (dialog, which) -> {
-            String newUrl = input.getText().toString().trim();
-            if (!newUrl.isEmpty()) {
-                if (!newUrl.startsWith("http://") && !newUrl.startsWith("https://")) {
-                    newUrl = "https://" + newUrl;
-                }
-                urlPane2 = newUrl;
-                if (nativeWebView2 != null) nativeWebView2.loadUrl(newUrl);
-            }
+            navigateToUrl(2, input.getText().toString());
         });
         builder.setNeutralButton("Cancelar", null);
         builder.show();
@@ -733,11 +920,32 @@ public class MainActivity extends BridgeActivity {
         }
 
         @Override
+        public void onPageStarted(WebView view, String url, Bitmap favicon) {
+            super.onPageStarted(view, url, favicon);
+            MainActivity act = activityRef.get();
+            if (act != null) {
+                act.injectPortraitEmulation(view);
+                act.updateUrlInputFromPage(view, url);
+            }
+        }
+
+        @Override
         public void onPageFinished(WebView view, String url) {
             super.onPageFinished(view, url);
             MainActivity act = activityRef.get();
             if (act != null) {
+                act.injectPortraitEmulation(view);
                 act.injectGhostPopupCleaner(view);
+                act.updateUrlInputFromPage(view, url);
+            }
+        }
+
+        @Override
+        public void doUpdateVisitedHistory(WebView view, String url, boolean isReload) {
+            super.doUpdateVisitedHistory(view, url, isReload);
+            MainActivity act = activityRef.get();
+            if (act != null) {
+                act.updateUrlInputFromPage(view, url);
             }
         }
 
