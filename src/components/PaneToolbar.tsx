@@ -172,7 +172,7 @@ export const PaneToolbar: React.FC<PaneToolbarProps> = ({
           <ArrowClockwise
             size={isMobile ? 11 : 13}
             weight="bold"
-            className={pane.isLoading ? 'animate-spin text-[#10B981]' : ''}
+            className={pane.isLoading ? 'animate-spin text-[#3B82F6]' : ''}
           />
         </button>
 
@@ -199,16 +199,16 @@ export const PaneToolbar: React.FC<PaneToolbarProps> = ({
             isMobile ? 'h-[20px] px-1.5 gap-1' : 'h-[24px] px-2 gap-1.5'
           } flex items-center bg-[#090A0C] border rounded-[2px] transition-colors ${
             isActive
-              ? 'border-[#232832] focus-within:border-[#10B981]'
-              : 'border-[#232832]/70 focus-within:border-[#10B981]'
+              ? 'border-[#232832] focus-within:border-[#3B82F6]'
+              : 'border-[#232832]/70 focus-within:border-[#3B82F6]'
           }`}
         >
           {isBlank ? (
             <Globe size={isMobile ? 10 : 12} className="text-[#6B7280] shrink-0" />
           ) : isHttps ? (
-            <LockKey size={isMobile ? 10 : 12} weight="fill" className="text-[#10B981] shrink-0" />
+            <LockKey size={isMobile ? 10 : 12} weight="fill" className="text-[#3B82F6] shrink-0" />
           ) : (
-            <Globe size={isMobile ? 10 : 12} className="text-[#F59E0B] shrink-0" />
+            <Globe size={isMobile ? 10 : 12} className="text-[#EAB308] shrink-0" />
           )}
 
           <input
@@ -228,7 +228,7 @@ export const PaneToolbar: React.FC<PaneToolbarProps> = ({
 
           {pane.useProxy && (
             <span
-              className="text-[9px] font-mono px-1 py-0.2 bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30 rounded-[2px] shrink-0"
+              className="text-[9px] font-mono px-1 py-0.2 bg-[#3B82F6]/15 text-[#3B82F6] border border-[#3B82F6]/30 rounded-[2px] shrink-0"
               title="Modo Proxy de Sessão Isolada ativo"
             >
               PROXY
@@ -281,7 +281,7 @@ export const PaneToolbar: React.FC<PaneToolbarProps> = ({
               isMobile ? 'w-[20px] h-[20px]' : 'w-[24px] h-[24px]'
             } flex items-center justify-center rounded-[2px] transition-colors cursor-pointer ${
               pane.useProxy
-                ? 'bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/40'
+                ? 'bg-[#3B82F6]/20 text-[#3B82F6] border border-[#3B82F6]/40'
                 : 'text-[#9CA3AF] hover:text-[#F3F4F6] hover:bg-[#232832]'
             }`}
           >
@@ -342,7 +342,7 @@ export const PaneToolbar: React.FC<PaneToolbarProps> = ({
             isMobile ? 'w-[20px] h-[20px]' : 'w-[24px] h-[24px]'
           } flex items-center justify-center rounded-[2px] transition-colors cursor-pointer ${
             isMaximized
-              ? 'bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/40'
+              ? 'bg-[#3B82F6]/20 text-[#3B82F6] border border-[#3B82F6]/40'
               : 'text-[#9CA3AF] hover:text-[#F3F4F6] hover:bg-[#232832]'
           }`}
         >

@@ -76,7 +76,7 @@ export const SpeedDial: React.FC<SpeedDialProps> = ({
       {/* Center: Quick Address / Search + Bookmarks */}
       <div className="my-auto py-4 max-w-[520px] w-full mx-auto flex flex-col gap-4">
         <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-1.5 text-[11px] font-mono text-[#10B981]">
+          <div className="flex items-center gap-1.5 text-[11px] font-mono text-[#3B82F6]">
             <ShieldCheck size={14} weight="fill" />
             <span>
               CONTAINER ISOLADO #{tabSessionNumber} ({sessionId.slice(0, 14)})
@@ -94,7 +94,7 @@ export const SpeedDial: React.FC<SpeedDialProps> = ({
 
         {/* Search / URL Bar */}
         <form onSubmit={handleSubmit} className="w-full">
-          <div className="flex items-center gap-2 px-3 h-[38px] bg-[#111317] border border-[#232832] focus-within:border-[#10B981] rounded-[2px] transition-colors">
+          <div className="flex items-center gap-2 px-3 h-[38px] bg-[#111317] border border-[#232832] focus-within:border-[#3B82F6] rounded-[2px] transition-colors">
             <MagnifyingGlass size={15} className="text-[#9CA3AF] shrink-0" />
             <input
               type="text"
@@ -106,7 +106,7 @@ export const SpeedDial: React.FC<SpeedDialProps> = ({
             />
             <button
               type="submit"
-              className="px-2.5 py-1 bg-[#10B981] hover:bg-[#059669] text-[#090A0C] font-semibold text-[11px] rounded-[2px] transition-colors shrink-0 cursor-pointer"
+              className="px-2.5 py-1 bg-[#3B82F6] hover:bg-[#2563EB] text-white font-semibold text-[11px] rounded-[2px] transition-colors shrink-0 cursor-pointer"
             >
               Abrir
             </button>
@@ -120,7 +120,7 @@ export const SpeedDial: React.FC<SpeedDialProps> = ({
               key={item.url}
               type="button"
               onClick={() => onNavigate(item.url, item.needsProxyInWeb)}
-              className="group p-2 bg-[#111317] hover:bg-[#181B21] border border-[#232832] hover:border-[#10B981]/50 rounded-[2px] text-left transition-all flex flex-col justify-between gap-1.5 cursor-pointer"
+              className="group p-2 bg-[#111317] hover:bg-[#181B21] border border-[#232832] hover:border-[#3B82F6]/50 rounded-[2px] text-left transition-all flex flex-col justify-between gap-1.5 cursor-pointer"
             >
               <div className="flex items-center justify-between w-full">
                 <span
@@ -129,7 +129,7 @@ export const SpeedDial: React.FC<SpeedDialProps> = ({
                 />
                 <ArrowUpRight
                   size={12}
-                  className="text-[#6B7280] group-hover:text-[#10B981] transition-colors"
+                  className="text-[#6B7280] group-hover:text-[#3B82F6] transition-colors"
                 />
               </div>
               <div>
@@ -148,7 +148,7 @@ export const SpeedDial: React.FC<SpeedDialProps> = ({
       {/* Footer Info */}
       <div className="flex items-center justify-between text-[10px] font-mono text-[#6B7280] border-t border-[#232832] pt-2">
         <span className="flex items-center gap-1">
-          <Compass size={12} className="text-[#10B981]" />
+          <Compass size={12} className="text-[#EAB308]" />
           Grade 2x2 Independente
         </span>
         <span>Duplo-clique nas divisórias para centralizar 50×50</span>

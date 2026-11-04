@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.webkit.ConsoleMessage;
 import android.webkit.CookieManager;
+import android.webkit.RenderProcessGoneDetail;
 import android.webkit.ServiceWorkerClient;
 import android.webkit.ServiceWorkerController;
 import android.webkit.WebChromeClient;
@@ -41,6 +42,7 @@ public class MainActivity extends BridgeActivity {
     private static final List<String> RECENT_LOGS = Collections.synchronizedList(new ArrayList<>());
     private static OkHttpClient okHttpClient;
     private static String appUserAgent;
+    private FourNavWebViewClient customWebViewClient;
 
     public static void logMessage(String msg) {
         Log.d(TAG, msg);
@@ -100,6 +102,7 @@ public class MainActivity extends BridgeActivity {
         if (bridge != null) {
             WebView webView = bridge.getWebView();
             WebView.setWebContentsDebuggingEnabled(true);
+            webView.setBackgroundColor(android.graphics.Color.parseColor("#090A0C"));
             WebSettings settings = webView.getSettings();
 
             settings.setJavaScriptEnabled(true);
@@ -156,8 +159,29 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onResume() {
         super.onResume();
+        Bridge bridge = this.getBridge();
+        if (bridge != null && bridge.getWebView() != null) {
+            WebView wv = bridge.getWebView();
+            try {
+                wv.resumeTimers();
+                wv.onResume();
+                wv.postInvalidate();
+            } catch (Exception ignored) {}
+        }
         applyCustomWebViewClient();
         installServiceWorkerInterceptor();
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        Bridge bridge = this.getBridge();
+        if (bridge != null && bridge.getWebView() != null) {
+            WebView wv = bridge.getWebView();
+            try {
+                wv.onPause();
+            } catch (Exception ignored) {}
+        }
     }
 
     private void initOkHttp() {
@@ -238,10 +262,12 @@ public class MainActivity extends BridgeActivity {
     private void applyCustomWebViewClient() {
         Bridge bridge = this.getBridge();
         if (bridge != null && bridge.getWebView() != null) {
-            FourNavWebViewClient client = new FourNavWebViewClient(bridge);
-            bridge.setWebViewClient(client);
-            bridge.getWebView().setWebViewClient(client);
-            logMessage("FourNavWebViewClient applied to Bridge and WebView");
+            if (customWebViewClient == null) {
+                customWebViewClient = new FourNavWebViewClient(bridge, this);
+                bridge.setWebViewClient(customWebViewClient);
+                bridge.getWebView().setWebViewClient(customWebViewClient);
+                logMessage("FourNavWebViewClient applied to Bridge and WebView");
+            }
         }
     }
 
@@ -483,6 +509,12 @@ public class MainActivity extends BridgeActivity {
                             + "}"
                             + "window.addEventListener('click',handleInteraction,true);"
                             + "window.addEventListener('touchend',handleInteraction,true);"
+                            + "window.addEventListener('webglcontextlost',function(e){try{e.preventDefault();}catch(err){}},false);"
+                            + "document.addEventListener('visibilitychange',function(){"
+                            + "if(document.visibilityState==='visible'){"
+                            + "try{window.dispatchEvent(new Event('resize'));}catch(e){}"
+                            + "}"
+                            + "});"
                             + "var origAttach=Element.prototype.attachShadow;"
                             + "if(origAttach){"
                             + "Element.prototype.attachShadow=function(init){"
@@ -569,9 +601,9 @@ public class MainActivity extends BridgeActivity {
             String errorHtml = "<!DOCTYPE html><html><body style=\"background:#090A0C;color:#EF4444;font-family:sans-serif;padding:24px;text-align:center;\">"
                     + "<div style=\"max-width:400px;margin:40px auto;border:1px solid #232832;background:#111317;padding:20px;border-radius:4px;\">"
                     + "<h3 style=\"color:#F3F4F6;margin-top:0;\">Falha ao Conectar</h3>"
-                    + "<p style=\"color:#9CA3AF;font-size:12px;\">Ocorreu um erro ao interceptar o site: <br><code style=\"color:#10B981;\">" + urlStr + "</code></p>"
+                    + "<p style=\"color:#9CA3AF;font-size:12px;\">Ocorreu um erro ao interceptar o site: <br><code style=\"color:#3B82F6;\">" + urlStr + "</code></p>"
                     + "<p style=\"background:#181B21;padding:8px;font-size:11px;color:#F87171;word-break:break-all;\">" + errorMsg + "</p>"
-                    + "<button onclick=\"location.reload()\" style=\"background:#10B981;color:#000;border:none;padding:8px 16px;border-radius:2px;font-weight:bold;cursor:pointer;margin-top:10px;\">Recarregar</button>"
+                    + "<button onclick=\"location.reload()\" style=\"background:#3B82F6;color:#FFF;border:none;padding:8px 16px;border-radius:2px;font-weight:bold;cursor:pointer;margin-top:10px;\">Recarregar</button>"
                     + "</div></body></html>";
             Map<String, String> errHeaders = new HashMap<>();
             errHeaders.put("Content-Type", "text/html; charset=utf-8");
@@ -581,8 +613,34 @@ public class MainActivity extends BridgeActivity {
     }
 
     private static class FourNavWebViewClient extends BridgeWebViewClient {
-        public FourNavWebViewClient(Bridge bridge) {
+        private final java.lang.ref.WeakReference<MainActivity> activityRef;
+
+        public FourNavWebViewClient(Bridge bridge, MainActivity activity) {
             super(bridge);
+            this.activityRef = new java.lang.ref.WeakReference<>(activity);
+        }
+
+        @Override
+        public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
+            boolean didCrash = detail != null && detail.didCrash();
+            logMessage("CRITICAL: WebView render process gone! didCrash=" + didCrash);
+            if (view != null) {
+                try {
+                    view.destroy();
+                } catch (Exception ignored) {}
+            }
+            MainActivity activity = activityRef.get();
+            if (activity != null && !activity.isFinishing()) {
+                activity.runOnUiThread(() -> {
+                    try {
+                        logMessage("Recreating MainActivity to restore WebView after renderProcessGone...");
+                        activity.recreate();
+                    } catch (Exception e) {
+                        logMessage("Failed to recreate activity: " + e.getMessage());
+                    }
+                });
+            }
+            return true;
         }
 
         @Override

@@ -4,10 +4,12 @@
 @layer base {
   :root {
     --bg-canvas: #090A0C;
-    --bg-surface: #111317;
-    --bg-elevated: #181B21;
-    --border-hairline: #232832;
-    --accent-primary: #10B981;
+    --bg-surface: #101318;
+    --bg-elevated: #161A22;
+    --border-hairline: #222938;
+    --accent-blue: #3B82F6;
+    --accent-gold: #EAB308;
+    --accent-primary: #3B82F6;
     --text-primary: #F3F4F6;
     --text-secondary: #9CA3AF;
   }

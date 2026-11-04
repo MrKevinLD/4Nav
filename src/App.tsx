@@ -168,7 +168,7 @@ export const App: React.FC = () => {
         <div
           onTouchStart={handleEdgeTouchStart}
           onTouchEnd={handleEdgeTouchEnd}
-          className="fixed top-0 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1 px-2.5 py-1 bg-[#090A0C]/90 hover:bg-[#111317] border-b border-x border-[#10B981]/50 rounded-b-md shadow-2xl backdrop-blur select-none transition-all"
+          className="fixed top-0 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1 px-2.5 py-1 bg-[#090A0C]/90 hover:bg-[#111317] border-b border-x border-[#3B82F6]/50 rounded-b-md shadow-2xl backdrop-blur select-none transition-all"
         >
           {/* Quick Maximizers for Each Window */}
           {currentPaneIds.length > 1 && (
@@ -188,7 +188,7 @@ export const App: React.FC = () => {
                     aria-label={`Maximizar Janela ${paneNum}`}
                     className={`px-2 py-0.5 text-[10px] font-mono font-bold rounded-[2px] transition-all cursor-pointer flex items-center gap-1 ${
                       isMax
-                        ? 'bg-[#10B981] text-[#090A0C] shadow-sm'
+                        ? 'bg-[#3B82F6] text-[#090A0C] shadow-sm'
                         : 'bg-[#181B21] text-[#9CA3AF] hover:text-[#F3F4F6] hover:bg-[#232832] border border-[#232832]'
                     }`}
                   >
@@ -208,7 +208,7 @@ export const App: React.FC = () => {
                   }}
                   title="Restaurar divisão de janelas"
                   aria-label="Restaurar divisão"
-                  className="px-2 py-0.5 bg-[#181B21] hover:bg-[#232832] text-[#10B981] border border-[#10B981]/40 rounded-[2px] text-[10px] font-mono font-bold transition-all cursor-pointer"
+                  className="px-2 py-0.5 bg-[#181B21] hover:bg-[#EAB308]/15 text-[#EAB308] border border-[#EAB308]/40 rounded-[2px] text-[10px] font-mono font-bold transition-all cursor-pointer"
                 >
                   Dividir
                 </button>
@@ -222,7 +222,7 @@ export const App: React.FC = () => {
             onClick={() => setIsImmersiveMode(false)}
             title="Toque para restaurar todas as barras (ou deslize para baixo)"
             aria-label="Mostrar barras de navegação"
-            className="flex items-center gap-1 pl-1 text-[#10B981] text-[10px] font-mono font-bold cursor-pointer group hover:text-[#34D399] transition-colors"
+            className="flex items-center gap-1 pl-1 text-[#3B82F6] text-[10px] font-mono font-bold cursor-pointer group hover:text-[#60A5FA] transition-colors"
           >
             <CaretDown size={12} weight="bold" className="group-hover:translate-y-0.5 transition-transform" />
             <span className="text-[9px] tracking-wider uppercase">Barras</span>

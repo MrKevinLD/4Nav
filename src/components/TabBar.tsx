@@ -128,12 +128,12 @@ export const TabBar: React.FC<TabBarProps> = ({
           } bg-[#111317] border border-[#232832] rounded-[2px] shrink-0`}
           title="4Nav — Navegador Multi-Sessão Otimizado para Jogos Idle"
         >
-          <SquaresFour size={isMobile ? 13 : 16} weight="bold" className="text-[#10B981]" />
+          <SquaresFour size={isMobile ? 13 : 16} weight="bold" className="text-[#3B82F6]" />
           <span className={`${isMobile ? 'text-[10px]' : 'text-[11px]'} font-bold tracking-wider uppercase text-[#F3F4F6]`}>
             4NAV
           </span>
           {!isMobile && (
-            <span className="text-[9px] font-mono px-1 py-0.2 bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30 rounded-[2px]">
+            <span className="text-[9px] font-mono px-1 py-0.2 bg-[#EAB308]/15 text-[#EAB308] border border-[#EAB308]/30 rounded-[2px]">
               IDLE HUB
             </span>
           )}
@@ -192,7 +192,7 @@ export const TabBar: React.FC<TabBarProps> = ({
                       }}
                       autoFocus
                       aria-label="Renomear aba"
-                      className="bg-[#090A0C] text-[#F3F4F6] text-[10px] px-1 py-0 border border-[#10B981] rounded-[2px] outline-none w-full"
+                      className="bg-[#090A0C] text-[#F3F4F6] text-[10px] px-1 py-0 border border-[#3B82F6] rounded-[2px] outline-none w-full"
                     />
                   ) : (
                     <>
@@ -247,7 +247,7 @@ export const TabBar: React.FC<TabBarProps> = ({
       {/* Right: Quick Resizing + Actions + Settings */}
       <div className="flex items-center gap-1.5 shrink-0">
         {sessionToast && (
-          <div className="hidden lg:flex items-center gap-1.5 px-2 py-0.5 bg-[#10B981]/15 border border-[#10B981]/40 text-[#10B981] text-[10px] font-mono rounded-[2px]">
+          <div className="hidden lg:flex items-center gap-1.5 px-2 py-0.5 bg-[#3B82F6]/15 border border-[#3B82F6]/40 text-[#3B82F6] text-[10px] font-mono rounded-[2px]">
             <ShieldCheck size={12} weight="fill" />
             <span>{sessionToast}</span>
           </div>
@@ -293,7 +293,7 @@ export const TabBar: React.FC<TabBarProps> = ({
                 type="button"
                 onClick={onResetGridSplit}
                 title="Restaurar divisão em 2 janelas"
-                className="px-1.5 py-0.5 bg-[#10B981] text-[#090A0C] font-bold text-[9px] rounded-[2px] hover:bg-[#059669] transition-colors cursor-pointer"
+                className="px-1.5 py-0.5 bg-[#3B82F6] text-[#090A0C] font-bold text-[9px] rounded-[2px] hover:bg-[#2563EB] transition-colors cursor-pointer"
               >
                 Restaurar
               </button>
@@ -305,7 +305,7 @@ export const TabBar: React.FC<TabBarProps> = ({
                   title="Divisão 50% / 50% (Equilibrado)"
                   className={`px-1.5 py-0.5 text-[9px] font-mono rounded-[2px] transition-colors cursor-pointer ${
                     Math.round(isPortrait ? splitY : splitX) === 50
-                      ? 'bg-[#10B981] text-[#090A0C] font-bold'
+                      ? 'bg-[#3B82F6] text-[#090A0C] font-bold'
                       : 'text-[#9CA3AF] hover:text-[#F3F4F6] hover:bg-[#181B21]'
                   }`}
                 >
@@ -317,7 +317,7 @@ export const TabBar: React.FC<TabBarProps> = ({
                   title={isPortrait ? "Divisão 70% Cima / 30% Baixo" : "Divisão 70% / 30% (Foco Esquerda)"}
                   className={`px-1.5 py-0.5 text-[9px] font-mono rounded-[2px] transition-colors cursor-pointer ${
                     Math.round(isPortrait ? splitY : splitX) === 70
-                      ? 'bg-[#10B981] text-[#090A0C] font-bold'
+                      ? 'bg-[#3B82F6] text-[#090A0C] font-bold'
                       : 'text-[#9CA3AF] hover:text-[#F3F4F6] hover:bg-[#181B21]'
                   }`}
                 >
@@ -329,7 +329,7 @@ export const TabBar: React.FC<TabBarProps> = ({
                   title={isPortrait ? "Divisão 30% Cima / 70% Baixo" : "Divisão 30% / 70% (Foco Direita)"}
                   className={`px-1.5 py-0.5 text-[9px] font-mono rounded-[2px] transition-colors cursor-pointer ${
                     Math.round(isPortrait ? splitY : splitX) === 30
-                      ? 'bg-[#10B981] text-[#090A0C] font-bold'
+                      ? 'bg-[#3B82F6] text-[#090A0C] font-bold'
                       : 'text-[#9CA3AF] hover:text-[#F3F4F6] hover:bg-[#181B21]'
                   }`}
                 >
@@ -363,11 +363,11 @@ export const TabBar: React.FC<TabBarProps> = ({
           title="Adicionar Tela (+ Janela)"
           className={`flex items-center gap-1 ${
             isMobile ? 'px-1.5 h-[24px] text-[10px]' : 'px-2.5 h-[26px] text-[11px]'
-          } bg-[#10B981]/15 hover:bg-[#10B981]/25 text-[#10B981] border border-[#10B981]/40 rounded-[2px] font-bold transition-colors cursor-pointer`}
+          } bg-[#3B82F6]/15 hover:bg-[#3B82F6]/25 text-[#3B82F6] border border-[#3B82F6]/40 rounded-[2px] font-bold transition-colors cursor-pointer`}
         >
           <Plus size={isMobile ? 11 : 13} weight="bold" />
           <span>+ Janela</span>
-          <span className="text-[9px] font-mono px-1 py-0.2 bg-[#10B981]/20 rounded-[2px]">
+          <span className="text-[9px] font-mono px-1 py-0.2 bg-[#3B82F6]/20 rounded-[2px]">
             {currentWindowCount}
           </span>
         </button>
@@ -382,7 +382,7 @@ export const TabBar: React.FC<TabBarProps> = ({
               isMobile ? 'w-[24px] h-[24px] justify-center px-0' : 'px-2.5 h-[26px]'
             } bg-[#111317] hover:bg-[#181B21] text-[#F3F4F6] border border-[#232832] rounded-[2px] text-[11px] font-medium transition-colors cursor-pointer`}
           >
-            <SquaresFour size={13} className="text-[#10B981]" />
+            <SquaresFour size={13} className="text-[#EAB308]" />
             <span className="hidden md:inline">Presets</span>
           </button>
 
@@ -426,9 +426,9 @@ export const TabBar: React.FC<TabBarProps> = ({
           title="Configurações (Otimização para Jogos Idle e Atalhos)"
           className={`flex items-center gap-1 ${
             isMobile ? 'w-[24px] h-[24px] justify-center px-0' : 'px-2.5 h-[26px]'
-          } bg-[#111317] hover:bg-[#181B21] text-[#F3F4F6] border border-[#232832] hover:border-[#10B981]/50 rounded-[2px] text-[11px] font-medium transition-colors cursor-pointer`}
+          } bg-[#111317] hover:bg-[#181B21] text-[#F3F4F6] border border-[#232832] hover:border-[#EAB308]/50 rounded-[2px] text-[11px] font-medium transition-colors cursor-pointer`}
         >
-          <Gear size={13} className="text-[#10B981]" weight="bold" />
+          <Gear size={13} className="text-[#EAB308]" weight="bold" />
           <span className="hidden sm:inline">Configurações</span>
         </button>
 
@@ -439,7 +439,7 @@ export const TabBar: React.FC<TabBarProps> = ({
             onClick={onHide}
             title="Modo Imersivo: Ocultar todas as barras (ou deslize para cima)"
             aria-label="Ocultar todas as barras"
-            className="w-[24px] h-[24px] flex items-center justify-center rounded-[2px] text-[#9CA3AF] hover:text-[#10B981] bg-[#111317] border border-[#232832] transition-colors cursor-pointer shrink-0"
+            className="w-[24px] h-[24px] flex items-center justify-center rounded-[2px] text-[#9CA3AF] hover:text-[#3B82F6] bg-[#111317] border border-[#232832] transition-colors cursor-pointer shrink-0"
           >
             <CaretUp size={13} weight="bold" />
           </button>

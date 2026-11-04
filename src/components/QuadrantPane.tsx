@@ -312,7 +312,7 @@ export const QuadrantPane: React.FC<QuadrantPaneProps> = ({
       onMouseDown={onFocusPane}
       aria-label={`Quadrante ${pane.quadrantNumber} - ${pane.positionLabel}`}
       className={`relative w-full h-full flex flex-col bg-[#090A0C] overflow-hidden border transition-colors ${
-        isActive ? 'border-[#10B981]' : 'border-[#232832]'
+        isActive ? 'border-[#3B82F6]' : 'border-[#232832]'
       }`}
     >
       {/* Quadrant Individual Mini Toolbar */}
@@ -358,7 +358,7 @@ export const QuadrantPane: React.FC<QuadrantPaneProps> = ({
       {/* Loading Progress Hairline */}
       {pane.isLoading && !isBlank && (
         <div className="h-[2px] w-full bg-[#111317] overflow-hidden shrink-0">
-          <div className="h-full w-1/2 bg-[#10B981] animate-pulse" />
+          <div className="h-full w-1/2 bg-[#3B82F6] animate-pulse" />
         </div>
       )}
 
@@ -392,7 +392,7 @@ export const QuadrantPane: React.FC<QuadrantPaneProps> = ({
             src: pane.url,
             partition: electronPartition,
             allowpopups: 'true',
-            className: 'w-full h-full border-0 bg-white',
+            className: 'w-full h-full border-0 bg-[#090A0C]',
           })
         ) : (
           <iframe
@@ -421,7 +421,7 @@ export const QuadrantPane: React.FC<QuadrantPaneProps> = ({
                 : 'allow-same-origin allow-scripts allow-forms allow-popups allow-modals allow-presentation'
             }
             referrerPolicy="no-referrer"
-            className="w-full h-full border-0 bg-white"
+            className="w-full h-full border-0 bg-[#090A0C]"
           />
         )}
 
@@ -450,11 +450,11 @@ export const QuadrantPane: React.FC<QuadrantPaneProps> = ({
               </div>
 
               <div className="p-2.5 bg-[#090A0C] border border-[#232832] rounded-[2px] text-[11px] text-[#9CA3AF] flex items-center gap-2">
-                <ShieldCheck size={16} className="text-[#10B981] shrink-0" />
+                <ShieldCheck size={16} className="text-[#3B82F6] shrink-0" />
                 <span>
                   Você pode ativar o <strong className="text-[#F3F4F6]">Proxy de Sessão Isolada</strong>{' '}
                   para carregar dentro deste quadrante com cookies exclusivos da{' '}
-                  <strong className="text-[#10B981]">Sessão #{tabSessionNumber}</strong>, ou usar o modo
+                  <strong className="text-[#3B82F6]">Sessão #{tabSessionNumber}</strong>, ou usar o modo
                   Desktop Electron (<code className="text-[#F3F4F6]">npm run desktop</code>).
                 </span>
               </div>
@@ -471,7 +471,7 @@ export const QuadrantPane: React.FC<QuadrantPaneProps> = ({
                       reloadCounter: p.reloadCounter + 1,
                     }))
                   }
-                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-[#10B981] hover:bg-[#059669] text-[#090A0C] font-semibold text-[11px] rounded-[2px] transition-colors cursor-pointer"
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-[#3B82F6] hover:bg-[#2563EB] text-white font-semibold text-[11px] rounded-[2px] transition-colors cursor-pointer"
                 >
                   <PlugsConnected size={14} weight="bold" />
                   <span>Ativar Proxy Isolado no Q{pane.quadrantNumber}</span>

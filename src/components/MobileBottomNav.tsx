@@ -79,8 +79,8 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
     : Object.keys(tab.panes);
 
   const getBatteryIcon = () => {
-    if (battery.charging) return <BatteryCharging size={13} className="text-[#10B981]" />;
-    if (battery.level > 60) return <BatteryHigh size={13} className="text-[#10B981]" />;
+    if (battery.charging) return <BatteryCharging size={13} className="text-[#3B82F6]" />;
+    if (battery.level > 60) return <BatteryHigh size={13} className="text-[#3B82F6]" />;
     if (battery.level > 20) return <BatteryMedium size={13} className="text-[#F59E0B]" />;
     return <BatteryLow size={13} className="text-[#EF4444]" />;
   };
@@ -89,7 +89,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
     <div className="relative select-none shrink-0 z-40">
       {/* Dynamic Toast Feedback Pill */}
       {toastMessage && (
-        <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1 bg-[#111317] border border-[#10B981]/50 text-[#10B981] text-[11px] font-mono font-bold rounded-full shadow-2xl flex items-center gap-1.5 animate-in fade-in slide-in-from-bottom-2 duration-150 whitespace-nowrap pointer-events-none z-50">
+        <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1 bg-[#111317] border border-[#EAB308]/50 text-[#EAB308] text-[11px] font-mono font-bold rounded-full shadow-2xl flex items-center gap-1.5 animate-in fade-in slide-in-from-bottom-2 duration-150 whitespace-nowrap pointer-events-none z-50">
           <Check size={12} weight="bold" />
           <span>{toastMessage}</span>
         </div>
@@ -110,7 +110,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
                 aria-label={`Conta ${num}`}
                 className={`min-w-[44px] h-[42px] px-2.5 flex items-center justify-center gap-1 rounded-[3px] text-xs font-mono font-bold transition-all cursor-pointer ${
                   isActive
-                    ? 'bg-[#10B981] text-[#090A0C] shadow-lg shadow-[#10B981]/25 ring-1 ring-[#10B981]'
+                    ? 'bg-[#3B82F6] text-[#090A0C] shadow-lg shadow-[#3B82F6]/25 ring-1 ring-[#3B82F6]'
                     : 'bg-[#111317] text-[#9CA3AF] border border-[#232832] active:bg-[#181B21]'
                 }`}
               >
@@ -125,7 +125,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
             onClick={onAddPane}
             title="Adicionar nova conta de jogo"
             aria-label="Adicionar nova conta"
-            className="w-[42px] h-[42px] bg-[#10B981]/15 border border-[#10B981]/40 text-[#10B981] rounded-[3px] flex items-center justify-center shrink-0 active:scale-95 transition-all cursor-pointer"
+            className="w-[42px] h-[42px] bg-[#EAB308]/15 border border-[#EAB308]/40 text-[#EAB308] rounded-[3px] flex items-center justify-center shrink-0 active:scale-95 transition-all cursor-pointer"
           >
             <Plus size={18} weight="bold" />
           </button>
@@ -141,7 +141,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
             aria-label="Manter tela ligada"
             className={`w-[38px] h-[42px] flex flex-col items-center justify-center rounded-[3px] border transition-all cursor-pointer ${
               keepScreenAwake
-                ? 'bg-[#10B981]/20 border-[#10B981] text-[#10B981] shadow-sm shadow-[#10B981]/20'
+                ? 'bg-[#EAB308]/20 border-[#EAB308] text-[#EAB308] shadow-sm shadow-[#EAB308]/20'
                 : 'bg-[#111317] border-[#232832] text-[#6B7280] active:bg-[#181B21]'
             }`}
           >
@@ -159,7 +159,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
             aria-label="Alternar modo eco de bateria"
             className={`w-[38px] h-[42px] flex flex-col items-center justify-center rounded-[3px] border transition-all cursor-pointer ${
               enableEcoBatteryMode
-                ? 'bg-[#F59E0B]/20 border-[#F59E0B] text-[#F59E0B] shadow-sm shadow-[#F59E0B]/20'
+                ? 'bg-[#3B82F6]/20 border-[#3B82F6] text-[#3B82F6] shadow-sm shadow-[#3B82F6]/20'
                 : 'bg-[#111317] border-[#232832] text-[#6B7280] active:bg-[#181B21]'
             }`}
           >
@@ -175,7 +175,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
             onClick={handleCleanMemoryClick}
             title="Liberar memória RAM e caches das contas"
             aria-label="Liberar memória RAM"
-            className="w-[36px] h-[42px] bg-[#111317] border border-[#232832] text-[#9CA3AF] active:text-[#10B981] active:scale-95 rounded-[3px] flex items-center justify-center shrink-0 transition-all cursor-pointer"
+            className="w-[36px] h-[42px] bg-[#111317] border border-[#232832] text-[#9CA3AF] active:text-[#EAB308] active:scale-95 rounded-[3px] flex items-center justify-center shrink-0 transition-all cursor-pointer"
           >
             <Broom size={16} />
           </button>
@@ -187,7 +187,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
               onClick={onToggleImmersiveMode}
               title="Modo Imersivo (Ocultar todas as barras)"
               aria-label="Ocultar todas as barras"
-              className="w-[36px] h-[42px] bg-[#111317] border border-[#232832] text-[#9CA3AF] active:text-[#10B981] active:scale-95 rounded-[3px] flex items-center justify-center shrink-0 transition-all cursor-pointer"
+              className="w-[36px] h-[42px] bg-[#111317] border border-[#232832] text-[#9CA3AF] active:text-[#3B82F6] active:scale-95 rounded-[3px] flex items-center justify-center shrink-0 transition-all cursor-pointer"
             >
               <CornersOut size={16} />
             </button>
@@ -202,7 +202,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
               aria-label="Modo tela dupla"
               className={`w-[36px] h-[42px] flex items-center justify-center rounded-[3px] border transition-colors cursor-pointer ${
                 isDualSplit
-                  ? 'bg-[#10B981]/20 border-[#10B981] text-[#10B981]'
+                  ? 'bg-[#3B82F6]/20 border-[#3B82F6] text-[#3B82F6]'
                   : 'bg-[#111317] border-[#232832] text-[#9CA3AF] active:bg-[#181B21]'
               }`}
             >
@@ -216,7 +216,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
             onClick={onOpenSettings}
             title="Configurações do Navegador"
             aria-label="Abrir configurações"
-            className="w-[36px] h-[42px] bg-[#111317] border border-[#232832] text-[#9CA3AF] active:text-[#10B981] rounded-[3px] flex items-center justify-center shrink-0 transition-colors cursor-pointer"
+            className="w-[36px] h-[42px] bg-[#111317] border border-[#232832] text-[#9CA3AF] active:text-[#EAB308] rounded-[3px] flex items-center justify-center shrink-0 transition-colors cursor-pointer"
           >
             <Gear size={16} />
           </button>
@@ -233,7 +233,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
           <span className="flex items-center gap-2">
             <span>{keepScreenAwake ? '⚡ Anti-Bloqueio' : '💤 Suspensão Auto'}</span>
             <span>•</span>
-            <span className={enableEcoBatteryMode ? 'text-[#F59E0B]' : 'text-[#10B981]'}>
+            <span className={enableEcoBatteryMode ? 'text-[#3B82F6]' : 'text-[#EAB308]'}>
               {enableEcoBatteryMode ? 'Modo Eco' : '60 FPS'}
             </span>
           </span>

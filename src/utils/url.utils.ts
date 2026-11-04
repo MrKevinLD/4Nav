@@ -4,14 +4,14 @@ import type { GridPreset, QuickBookmark } from '../types/browser.types';
  * Distinct technical container colors (Zero purple/violet/indigo per DESIGN.md)
  */
 export const CONTAINER_COLORS = [
-  '#10B981', // Signal Emerald (Container 1)
-  '#F59E0B', // Industrial Amber (Container 2)
-  '#06B6D4', // Tactical Cyan (Container 3)
-  '#EF4444', // Crimson Signal (Container 4)
-  '#84CC16', // Acid Lime (Container 5)
-  '#F97316', // High-Vis Orange (Container 6)
-  '#14B8A6', // Deep Teal (Container 7)
-  '#EC4899', // Coral Rose (Container 8)
+  '#3B82F6', // Electric Royal Blue (Container 1)
+  '#EAB308', // Radiant Gold (Container 2)
+  '#60A5FA', // Sky Sapphire (Container 3)
+  '#F59E0B', // Amber Gold (Container 4)
+  '#2563EB', // Deep Cobalt Blue (Container 5)
+  '#D97706', // Ancient Bronze Gold (Container 6)
+  '#38BDF8', // Cyan Ice Blue (Container 7)
+  '#FBBF24', // Champagne Gold (Container 8)
 ];
 
 export function getContainerColor(sessionNumber: number): string {
@@ -104,7 +104,7 @@ export const QUICK_BOOKMARKS: QuickBookmark[] = [
     title: 'RO Classic Idle',
     url: 'https://play.roclassicidle.com.br/?app=ONLINE',
     category: 'Game • Multi-Conta',
-    badgeColor: '#10B981',
+    badgeColor: '#EAB308',
   },
   {
     title: 'Google',
@@ -143,7 +143,7 @@ export const QUICK_BOOKMARKS: QuickBookmark[] = [
     title: 'Wikipedia PT',
     url: 'https://pt.wikipedia.org',
     category: 'Enciclopédia',
-    badgeColor: '#10B981',
+    badgeColor: '#3B82F6',
   },
   {
     title: 'Twitch',

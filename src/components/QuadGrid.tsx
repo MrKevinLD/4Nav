@@ -150,8 +150,8 @@ export const QuadGrid: React.FC<QuadGridProps> = ({
         {dragAxis && <div className="absolute inset-0 z-40 cursor-move" />}
 
         {maximizedPane && (
-          <div className="absolute top-2 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 px-3 py-1 bg-[#090A0C]/90 border border-[#10B981] rounded-[2px] shadow-2xl backdrop-blur text-[11px] text-[#F3F4F6]">
-            <span className="font-bold text-[#10B981]">Janela Maximizada</span>
+          <div className="absolute top-2 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 px-3 py-1 bg-[#090A0C]/90 border border-[#3B82F6] rounded-[2px] shadow-2xl backdrop-blur text-[11px] text-[#F3F4F6]">
+            <span className="font-bold text-[#3B82F6]">Janela Maximizada</span>
             <span className="text-[#9CA3AF] text-[10px]">
               {maximizeShortcuts?.[paneIds.indexOf(maximizedPane) + 1]
                 ? `(${maximizeShortcuts[paneIds.indexOf(maximizedPane) + 1]} ou ESC para restaurar)`
@@ -160,7 +160,7 @@ export const QuadGrid: React.FC<QuadGridProps> = ({
             <button
               type="button"
               onClick={() => onToggleMaximizePane(maximizedPane)}
-              className="px-2 py-0.5 bg-[#10B981] text-[#090A0C] font-bold rounded-[2px] text-[10px] hover:bg-[#059669] transition-colors cursor-pointer"
+              className="px-2 py-0.5 bg-[#3B82F6] text-[#FFFFFF] font-bold rounded-[2px] text-[10px] hover:bg-[#2563EB] transition-colors cursor-pointer"
             >
               Restaurar Grade
             </button>
@@ -197,7 +197,7 @@ export const QuadGrid: React.FC<QuadGridProps> = ({
                   ? 'Arraste para redimensionar verticalmente (Duplo-clique para 50%)'
                   : 'Arraste para redimensionar (Duplo-clique para 50%)'
               }
-              className={`relative w-full h-full bg-[#111317] hover:bg-[#10B981] active:bg-[#10B981] transition-colors z-30 group select-none ${
+              className={`relative w-full h-full bg-[#111317] hover:bg-[#3B82F6] active:bg-[#3B82F6] transition-colors z-30 group select-none ${
                 isVerticalSplit ? 'cursor-row-resize' : 'cursor-col-resize'
               }`}
             >
@@ -211,15 +211,15 @@ export const QuadGrid: React.FC<QuadGridProps> = ({
               />
               {/* Visual touch drag pill handle */}
               <div
-                className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#181B21] border border-[#232832] group-hover:border-[#10B981] group-hover:bg-[#10B981]/20 rounded-full flex items-center justify-center gap-1 shadow-lg pointer-events-none transition-colors ${
+                className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#181B21] border border-[#232832] group-hover:border-[#3B82F6] group-hover:bg-[#3B82F6]/20 rounded-full flex items-center justify-center gap-1 shadow-lg pointer-events-none transition-colors ${
                   isVerticalSplit
                     ? 'w-[36px] h-[14px] flex-row'
                     : 'w-[14px] h-[36px] flex-col'
                 }`}
               >
-                <div className="w-[3px] h-[3px] rounded-full bg-[#9CA3AF] group-hover:bg-[#10B981]" />
-                <div className="w-[3px] h-[3px] rounded-full bg-[#9CA3AF] group-hover:bg-[#10B981]" />
-                <div className="w-[3px] h-[3px] rounded-full bg-[#9CA3AF] group-hover:bg-[#10B981]" />
+                <div className="w-[3px] h-[3px] rounded-full bg-[#9CA3AF] group-hover:bg-[#3B82F6]" />
+                <div className="w-[3px] h-[3px] rounded-full bg-[#9CA3AF] group-hover:bg-[#3B82F6]" />
+                <div className="w-[3px] h-[3px] rounded-full bg-[#9CA3AF] group-hover:bg-[#3B82F6]" />
               </div>
             </div>
           )}
@@ -240,8 +240,8 @@ export const QuadGrid: React.FC<QuadGridProps> = ({
         {dragAxis && <div className="absolute inset-0 z-40 cursor-move" />}
 
         {maximizedPane && (
-          <div className="absolute top-2 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 px-3 py-1 bg-[#090A0C]/90 border border-[#10B981] rounded-[2px] shadow-2xl backdrop-blur text-[11px] text-[#F3F4F6]">
-            <span className="font-bold text-[#10B981]">Janela Maximizada</span>
+          <div className="absolute top-2 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 px-3 py-1 bg-[#090A0C]/90 border border-[#3B82F6] rounded-[2px] shadow-2xl backdrop-blur text-[11px] text-[#F3F4F6]">
+            <span className="font-bold text-[#3B82F6]">Janela Maximizada</span>
             <span className="text-[#9CA3AF] text-[10px]">
               {maximizeShortcuts?.[paneIds.indexOf(maximizedPane) + 1]
                 ? `(${maximizeShortcuts[paneIds.indexOf(maximizedPane) + 1]} ou ESC para restaurar)`
@@ -250,7 +250,7 @@ export const QuadGrid: React.FC<QuadGridProps> = ({
             <button
               type="button"
               onClick={() => onToggleMaximizePane(maximizedPane)}
-              className="px-2 py-0.5 bg-[#10B981] text-[#090A0C] font-bold rounded-[2px] text-[10px] hover:bg-[#059669] transition-colors cursor-pointer"
+              className="px-2 py-0.5 bg-[#3B82F6] text-[#FFFFFF] font-bold rounded-[2px] text-[10px] hover:bg-[#2563EB] transition-colors cursor-pointer"
             >
               Restaurar Grade
             </button>
@@ -277,7 +277,7 @@ export const QuadGrid: React.FC<QuadGridProps> = ({
               onPointerDown={() => setDragAxis('x')}
               onDoubleClick={() => onUpdateGridSplit(50, splitY)}
               title="Arraste para redimensionar horizontalmente (Duplo-clique para 50%)"
-              className="relative w-full h-full bg-[#111317] hover:bg-[#10B981] active:bg-[#10B981] cursor-col-resize transition-colors row-span-3 col-start-2 row-start-1 z-30 group select-none"
+              className="relative w-full h-full bg-[#111317] hover:bg-[#3B82F6] active:bg-[#3B82F6] cursor-col-resize transition-colors row-span-3 col-start-2 row-start-1 z-30 group select-none"
             >
               <div className="absolute inset-y-0 -left-3 -right-3 z-40 cursor-col-resize" />
             </div>
@@ -290,7 +290,7 @@ export const QuadGrid: React.FC<QuadGridProps> = ({
               onPointerDown={() => setDragAxis('y')}
               onDoubleClick={() => onUpdateGridSplit(splitX, 50)}
               title="Arraste para redimensionar verticalmente (Duplo-clique para 50%)"
-              className="relative w-full h-full bg-[#111317] hover:bg-[#10B981] active:bg-[#10B981] cursor-row-resize transition-colors col-span-3 col-start-1 row-start-2 z-30 group select-none"
+              className="relative w-full h-full bg-[#111317] hover:bg-[#3B82F6] active:bg-[#3B82F6] cursor-row-resize transition-colors col-span-3 col-start-1 row-start-2 z-30 group select-none"
             >
               <div className="absolute inset-x-0 -top-3 -bottom-3 z-40 cursor-row-resize" />
             </div>
@@ -309,7 +309,7 @@ export const QuadGrid: React.FC<QuadGridProps> = ({
               top: `calc(${splitY}% - 6px)`,
             }}
             title="Arraste para redimensionar os quadrantes simultaneamente (Duplo-clique para 50×50)"
-            className="absolute w-3.5 h-3.5 rounded-[2px] bg-[#181B21] border border-[#10B981] hover:scale-125 hover:bg-[#10B981] cursor-move z-30 transition-transform"
+            className="absolute w-3.5 h-3.5 rounded-[2px] bg-[#181B21] border border-[#3B82F6] hover:scale-125 hover:bg-[#3B82F6] cursor-move z-30 transition-transform"
           />
         )}
       </main>
@@ -331,8 +331,8 @@ export const QuadGrid: React.FC<QuadGridProps> = ({
       className="relative flex-1 w-full h-full bg-[#090A0C] overflow-hidden select-none"
     >
       {maximizedPane && (
-        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 px-3 py-1 bg-[#090A0C]/90 border border-[#10B981] rounded-[2px] shadow-2xl backdrop-blur text-[11px] text-[#F3F4F6]">
-          <span className="font-bold text-[#10B981]">Janela Maximizada</span>
+        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 px-3 py-1 bg-[#090A0C]/90 border border-[#3B82F6] rounded-[2px] shadow-2xl backdrop-blur text-[11px] text-[#F3F4F6]">
+          <span className="font-bold text-[#3B82F6]">Janela Maximizada</span>
           <span className="text-[#9CA3AF] text-[10px]">
             {maximizeShortcuts?.[paneIds.indexOf(maximizedPane) + 1]
               ? `(${maximizeShortcuts[paneIds.indexOf(maximizedPane) + 1]} ou ESC para restaurar)`
@@ -341,7 +341,7 @@ export const QuadGrid: React.FC<QuadGridProps> = ({
           <button
             type="button"
             onClick={() => onToggleMaximizePane(maximizedPane)}
-            className="px-2 py-0.5 bg-[#10B981] text-[#090A0C] font-bold rounded-[2px] text-[10px] hover:bg-[#059669] transition-colors cursor-pointer"
+            className="px-2 py-0.5 bg-[#3B82F6] text-[#FFFFFF] font-bold rounded-[2px] text-[10px] hover:bg-[#2563EB] transition-colors cursor-pointer"
           >
             Restaurar Grade
           </button>
