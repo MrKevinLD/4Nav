@@ -6,6 +6,7 @@ import {
   getPaneMeta,
   normalizeAddressInput,
 } from '../utils/url.utils';
+import { recordHistoryEntry } from '../utils/history.utils';
 
 const STORAGE_KEY = 'quadnav_desktop_tabs_v3';
 const ACTIVE_TAB_KEY = 'quadnav_active_tab_v3';
@@ -383,6 +384,10 @@ export function useBrowserState() {
         const nextHistory =
           lastUrl === targetUrl ? truncatedHistory : [...truncatedHistory, targetUrl];
         const nextIndex = nextHistory.length - 1;
+
+        if (targetUrl && targetUrl !== 'about:blank') {
+          recordHistoryEntry(targetUrl, getDisplayHost(targetUrl), pane.quadrantNumber);
+        }
 
         return {
           ...pane,

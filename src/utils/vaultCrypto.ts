@@ -158,3 +158,4 @@ export function loadVaultCredentials(): VaultCredential[] {
 export function saveVaultCredentials(credentials: VaultCredential[]): void {
   localStorage.setItem(STORAGE_KEY_CREDS, JSON.stringify(credentials));
 }
+

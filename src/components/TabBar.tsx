@@ -10,6 +10,8 @@ import {
   Gear,
   CaretUp,
   LockKey,
+  ClockCounterClockwise,
+  DownloadSimple,
 } from '@phosphor-icons/react';
 import type { BrowserTab } from '../types/browser.types';
 import { getDisplayHost, GRID_PRESETS } from '../utils/url.utils';
@@ -35,6 +37,9 @@ interface TabBarProps {
   onApplyPreset: (urls: Record<string, string>) => void;
   onOpenSettings: () => void;
   onOpenVault?: () => void;
+  onOpenHistory?: () => void;
+  onOpenDownloads?: () => void;
+  activeDownloadsCount?: number;
 }
 
 export const TabBar: React.FC<TabBarProps> = ({
@@ -57,6 +62,9 @@ export const TabBar: React.FC<TabBarProps> = ({
   onApplyPreset,
   onOpenSettings,
   onOpenVault,
+  onOpenHistory,
+  onOpenDownloads,
+  activeDownloadsCount = 0,
 }) => {
   const { isMobile, isPortrait } = useMobileView();
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
@@ -421,6 +429,41 @@ export const TabBar: React.FC<TabBarProps> = ({
             </>
           )}
         </div>
+
+        {/* Navigation History Button (Opera GX Style) */}
+        {onOpenHistory && (
+          <button
+            type="button"
+            onClick={onOpenHistory}
+            title="Histórico de Navegação (Ctrl+H)"
+            className={`flex items-center gap-1 ${
+              isMobile ? 'w-[24px] h-[24px] justify-center px-0' : 'px-2.5 h-[26px]'
+            } bg-[#111317] hover:bg-[#181B21] text-[#F3F4F6] border border-[#232832] hover:border-[#EAB308]/50 rounded-[2px] text-[11px] font-medium transition-colors cursor-pointer`}
+          >
+            <ClockCounterClockwise size={13} className="text-[#EAB308]" weight="bold" />
+            <span className="hidden sm:inline">Histórico</span>
+          </button>
+        )}
+
+        {/* Downloads Manager Button (Opera GX Style) */}
+        {onOpenDownloads && (
+          <button
+            type="button"
+            onClick={onOpenDownloads}
+            title="Downloads (Ctrl+J)"
+            className={`relative flex items-center gap-1 ${
+              isMobile ? 'w-[24px] h-[24px] justify-center px-0' : 'px-2.5 h-[26px]'
+            } bg-[#111317] hover:bg-[#181B21] text-[#F3F4F6] border border-[#232832] hover:border-[#3B82F6]/50 rounded-[2px] text-[11px] font-medium transition-colors cursor-pointer`}
+          >
+            <DownloadSimple size={13} className="text-[#3B82F6]" weight="bold" />
+            <span className="hidden sm:inline">Downloads</span>
+            {activeDownloadsCount > 0 && (
+              <span className="absolute -top-1 -right-1 px-1 min-w-[14px] h-[14px] bg-[#10B981] text-black font-bold text-[8px] rounded-full flex items-center justify-center animate-pulse">
+                {activeDownloadsCount}
+              </span>
+            )}
+          </button>
+        )}
 
         {/* Credentials Vault Button */}
         {onOpenVault && (

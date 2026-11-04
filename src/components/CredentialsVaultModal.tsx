@@ -889,3 +889,4 @@ export const CredentialsVaultModal: React.FC<CredentialsVaultModalProps> = ({
     </div>
   );
 };
+

@@ -111,17 +111,40 @@ const DANGEROUS_EXTENSIONS = new Set([
   '.wsh',
 ]);
 
+const activeDownloadsMap = new Map();
+const downloadsHistory = [];
+
+function broadcastDownload(data) {
+  const existingIdx = downloadsHistory.findIndex((d) => d.id === data.id);
+  if (existingIdx !== -1) {
+    downloadsHistory[existingIdx] = { ...downloadsHistory[existingIdx], ...data };
+  } else {
+    downloadsHistory.unshift(data);
+  }
+
+  if (mainWindowInstance && !mainWindowInstance.isDestroyed()) {
+    mainWindowInstance.webContents.send('download:updated', data);
+  }
+}
+
 /**
- * Attaches Download Guard against dangerous executables to a session.
+ * Attaches Download Guard and Live Progress Tracking to a session.
  */
 function attachDownloadGuard(targetSession) {
   targetSession.on('will-download', (event, item) => {
-    const filename = item.getFilename() || '';
+    const id = 'dl_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
+    const filename = item.getFilename() || 'download';
     const ext = path.extname(filename).toLowerCase();
+    const totalBytes = item.getTotalBytes() || 0;
+    const url = item.getURL() || '';
+    const startTime = Date.now();
+
+    activeDownloadsMap.set(id, item);
 
     if (DANGEROUS_EXTENSIONS.has(ext)) {
       event.preventDefault();
       item.cancel();
+      activeDownloadsMap.delete(id);
       console.warn(`[4Nav Download Guard] Bloqueado executável de alto risco: ${filename}`);
 
       if (mainWindowInstance && !mainWindowInstance.isDestroyed()) {
@@ -131,7 +154,84 @@ function attachDownloadGuard(targetSession) {
           timestamp: Date.now(),
         });
       }
+
+      broadcastDownload({
+        id,
+        filename,
+        ext,
+        url,
+        totalBytes,
+        receivedBytes: 0,
+        state: 'blocked',
+        speed: 0,
+        percent: 0,
+        startTime,
+        completedTime: Date.now(),
+        errorMessage: 'Bloqueado pelo Download Guard (executável proibido por segurança)',
+      });
+      return;
     }
+
+    // Normal safe download
+    broadcastDownload({
+      id,
+      filename,
+      ext,
+      url,
+      totalBytes,
+      receivedBytes: 0,
+      state: 'progressing',
+      speed: 0,
+      percent: 0,
+      startTime,
+      savePath: item.getSavePath(),
+    });
+
+    let lastBytes = 0;
+    let lastTime = Date.now();
+
+    item.on('updated', (_evt, state) => {
+      const now = Date.now();
+      const deltaBytes = item.getReceivedBytes() - lastBytes;
+      const deltaTime = (now - lastTime) / 1000;
+      const speed = deltaTime > 0 ? Math.round(deltaBytes / deltaTime) : 0;
+      lastBytes = item.getReceivedBytes();
+      lastTime = now;
+
+      const percent = totalBytes > 0 ? Math.round((item.getReceivedBytes() / totalBytes) * 100) : 0;
+
+      broadcastDownload({
+        id,
+        filename,
+        ext,
+        url,
+        totalBytes,
+        receivedBytes: item.getReceivedBytes(),
+        state: state === 'interrupted' ? 'interrupted' : 'progressing',
+        speed,
+        percent,
+        startTime,
+        savePath: item.getSavePath(),
+      });
+    });
+
+    item.once('done', (_evt, state) => {
+      activeDownloadsMap.delete(id);
+      broadcastDownload({
+        id,
+        filename,
+        ext,
+        url,
+        totalBytes: item.getTotalBytes() || item.getReceivedBytes(),
+        receivedBytes: item.getReceivedBytes(),
+        state: state === 'completed' ? 'completed' : state === 'cancelled' ? 'cancelled' : 'interrupted',
+        speed: 0,
+        percent: state === 'completed' ? 100 : 0,
+        startTime,
+        completedTime: Date.now(),
+        savePath: item.getSavePath(),
+      });
+    });
   });
 }
 
@@ -307,6 +407,45 @@ function createMainWindow() {
     mainWindow.loadFile(distIndex);
   }
 }
+
+ipcMain.handle('downloads:get', () => {
+  return downloadsHistory;
+});
+
+ipcMain.handle('downloads:openFile', async (_event, filePath) => {
+  if (!filePath) return { ok: false, error: 'Caminho inválido' };
+  try {
+    const res = await shell.openPath(filePath);
+    return { ok: !res, error: res };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('downloads:showInFolder', async (_event, filePath) => {
+  if (!filePath) return { ok: false };
+  try {
+    shell.showItemInFolder(filePath);
+    return { ok: true };
+  } catch {
+    return { ok: false };
+  }
+});
+
+ipcMain.handle('downloads:cancel', (_event, id) => {
+  const item = activeDownloadsMap.get(id);
+  if (item) {
+    item.cancel();
+    activeDownloadsMap.delete(id);
+    return { ok: true };
+  }
+  return { ok: false };
+});
+
+ipcMain.handle('downloads:clear', () => {
+  downloadsHistory.length = 0;
+  return { ok: true };
+});
 
 ipcMain.handle('session:prepare', (_event, partitionName) => {
   ensurePartitionConfigured(partitionName);

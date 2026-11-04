@@ -10,5 +10,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('security:blocked-download', handler);
     return () => ipcRenderer.removeListener('security:blocked-download', handler);
   },
+  onDownloadUpdated: (callback) => {
+    const handler = (_event, data) => callback(data);
+    ipcRenderer.on('download:updated', handler);
+    return () => ipcRenderer.removeListener('download:updated', handler);
+  },
+  getDownloads: () => ipcRenderer.invoke('downloads:get'),
+  openDownloadedFile: (filePath) => ipcRenderer.invoke('downloads:openFile', filePath),
+  showDownloadedFileInFolder: (filePath) => ipcRenderer.invoke('downloads:showInFolder', filePath),
+  cancelDownload: (id) => ipcRenderer.invoke('downloads:cancel', id),
+  clearDownloads: () => ipcRenderer.invoke('downloads:clear'),
 });
 

@@ -76,12 +76,34 @@ export interface AppSettings {
   enableEcoBatteryMode: boolean;
 }
 
+export interface DownloadItem {
+  id: string;
+  filename: string;
+  ext: string;
+  url: string;
+  totalBytes: number;
+  receivedBytes: number;
+  state: 'progressing' | 'completed' | 'cancelled' | 'interrupted' | 'blocked';
+  speed: number;
+  percent: number;
+  startTime: number;
+  completedTime?: number;
+  savePath?: string;
+  errorMessage?: string;
+}
+
 export interface ElectronBridgeAPI {
   isElectron: boolean;
   prepareSession: (partitionName: string) => Promise<{ ok: boolean; partitionName: string }>;
   clearSession: (partitionName: string) => Promise<{ ok: boolean; partitionName: string }>;
   openExternal: (targetUrl: string) => Promise<{ ok: boolean }>;
   onBlockedDownload?: (callback: (data: { filename: string; ext: string; timestamp: number }) => void) => () => void;
+  onDownloadUpdated?: (callback: (item: DownloadItem) => void) => () => void;
+  getDownloads?: () => Promise<DownloadItem[]>;
+  openDownloadedFile?: (path: string) => Promise<{ ok: boolean; error?: string }>;
+  showDownloadedFileInFolder?: (path: string) => Promise<{ ok: boolean }>;
+  cancelDownload?: (id: string) => Promise<{ ok: boolean }>;
+  clearDownloads?: () => Promise<{ ok: boolean }>;
 }
 
 declare global {

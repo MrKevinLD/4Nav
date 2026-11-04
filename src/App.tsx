@@ -9,6 +9,9 @@ import { QuadGrid } from './components/QuadGrid';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { SettingsModal } from './components/SettingsModal';
 import { CredentialsVaultModal } from './components/CredentialsVaultModal';
+import { HistoryModal } from './components/HistoryModal';
+import { DownloadsModal } from './components/DownloadsModal';
+import type { DownloadItem } from './types/browser.types';
 
 export const App: React.FC = () => {
   const {
@@ -46,6 +49,9 @@ export const App: React.FC = () => {
   const [isDualSplit, setIsDualSplit] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isVaultOpen, setIsVaultOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isDownloadsOpen, setIsDownloadsOpen] = useState(false);
+  const [downloads, setDownloads] = useState<DownloadItem[]>([]);
   const [blockedDownloadToast, setBlockedDownloadToast] = useState<{
     filename: string;
     ext: string;
@@ -53,7 +59,30 @@ export const App: React.FC = () => {
   const [isImmersiveMode, setIsImmersiveMode] = useState(false);
   const edgeTouchStartY = useRef<number | null>(null);
 
-  // 5. 🚫 Download Guard listener from Electron
+  // 5. 🚫 Download Guard & Live Downloads Listener from Electron
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.electronAPI?.getDownloads) {
+      window.electronAPI.getDownloads().then((items) => {
+        if (items) setDownloads(items);
+      }).catch(() => {});
+    }
+
+    if (typeof window !== 'undefined' && window.electronAPI?.onDownloadUpdated) {
+      const unsub = window.electronAPI.onDownloadUpdated((updatedItem) => {
+        setDownloads((prev) => {
+          const idx = prev.findIndex((d) => d.id === updatedItem.id);
+          if (idx !== -1) {
+            const next = [...prev];
+            next[idx] = updatedItem;
+            return next;
+          }
+          return [updatedItem, ...prev];
+        });
+      });
+      return unsub;
+    }
+  }, []);
+
   useEffect(() => {
     if (typeof window !== 'undefined' && window.electronAPI?.onBlockedDownload) {
       const unsub = window.electronAPI.onBlockedDownload((data) => {
@@ -116,6 +145,19 @@ export const App: React.FC = () => {
           closeTab(currentTab.id);
           return;
         }
+      }
+
+      // Opera GX style Ctrl+H (History) and Ctrl+J (Downloads)
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'h') {
+        e.preventDefault();
+        setIsHistoryOpen((prev) => !prev);
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'j') {
+        e.preventDefault();
+        setIsDownloadsOpen((prev) => !prev);
+        return;
       }
 
       // Check maximize shortcuts for individual windows (e.g., Alt+1, Alt+2...)
@@ -293,6 +335,9 @@ export const App: React.FC = () => {
         onApplyPreset={(urls) => applyPresetToTab(currentTab.id, urls)}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenVault={() => setIsVaultOpen(true)}
+        onOpenHistory={() => setIsHistoryOpen(true)}
+        onOpenDownloads={() => setIsDownloadsOpen(true)}
+        activeDownloadsCount={downloads.filter((d) => d.state === 'progressing').length}
       />
 
       {/* Main Grid Viewport for Active Tab */}
@@ -397,6 +442,37 @@ export const App: React.FC = () => {
         onFillCredentialToPane={(slotNum, username) => {
           // Quick feedback notification when copied/filled
           alert(`Credencial para J${slotNum} (${username}) pronta para uso!`);
+        }}
+      />
+
+      {/* 📜 Navigation History Modal (Opera GX Style) */}
+      <HistoryModal
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        onNavigateToUrl={(url, targetQuadrant) => {
+          if (!currentTab) return;
+          const paneIds = currentTab.paneOrder || Object.keys(currentTab.panes);
+          let targetPaneId = currentTab.activePane;
+          if (targetQuadrant && targetQuadrant >= 1 && targetQuadrant <= paneIds.length) {
+            targetPaneId = paneIds[targetQuadrant - 1];
+          }
+          if (targetPaneId) {
+            navigatePane(currentTab.id, targetPaneId, url);
+            setActivePane(currentTab.id, targetPaneId);
+          }
+        }}
+      />
+
+      {/* 📥 Live Downloads Manager Modal (Opera GX Style) */}
+      <DownloadsModal
+        isOpen={isDownloadsOpen}
+        onClose={() => setIsDownloadsOpen(false)}
+        downloads={downloads}
+        onClearDownloads={async () => {
+          if (window.electronAPI?.clearDownloads) {
+            await window.electronAPI.clearDownloads();
+          }
+          setDownloads([]);
         }}
       />
 

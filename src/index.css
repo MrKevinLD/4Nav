@@ -31,6 +31,22 @@
   }
 }
 
+/* Opera GX Style Sleek Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #090A0C;
+}
+::-webkit-scrollbar-thumb {
+  background: #232832;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3B82F6;
+}
+
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
