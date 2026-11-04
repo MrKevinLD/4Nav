@@ -44,30 +44,36 @@ public class MainActivity extends BridgeActivity {
     private static String appUserAgent;
     private FourNavWebViewClient customWebViewClient;
 
+    private static final String RAGIDLE_SHIM_SCRIPT =
+            "<script>" +
+            "(function() {" +
+            "  try {" +
+            "    Object.defineProperty(window, 'top', { get: function() { return window; }, configurable: false, enumerable: true });" +
+            "    Object.defineProperty(window, 'parent', { get: function() { return window; }, configurable: false, enumerable: true });" +
+            "    Object.defineProperty(window, 'frameElement', { get: function() { return null; }, configurable: false, enumerable: true });" +
+            "    var origGet = URLSearchParams.prototype.get;" +
+            "    URLSearchParams.prototype.get = function(key) {" +
+            "      if (key === 'app') return 'ONLINE';" +
+            "      return origGet.apply(this, arguments);" +
+            "    };" +
+            "    var origHas = URLSearchParams.prototype.has;" +
+            "    URLSearchParams.prototype.has = function(key) {" +
+            "      if (key === 'app') return true;" +
+            "      return origHas.apply(this, arguments);" +
+            "    };" +
+            "    window.RagIdleCascaDeProducao = false;" +
+            "  } catch(e) {}" +
+            "})();" +
+            "</script>";
+
     private static final String STANDALONE_SHIM_SCRIPT =
             "<script>" +
             "(function() {" +
             "  try {" +
-            "    var rootSameOrigin = window;" +
-            "    try {" +
-            "      var curr = window;" +
-            "      while (curr.parent && curr.parent !== curr) {" +
-            "        if (curr.parent.location.origin === window.location.origin) {" +
-            "          curr = curr.parent;" +
-            "          rootSameOrigin = curr;" +
-            "        } else {" +
-            "          break;" +
-            "        }" +
-            "      }" +
-            "    } catch (e) {}" +
-            "    if (rootSameOrigin === window) {" +
-            "      Object.defineProperty(window, 'top', { get: function() { return window; }, configurable: false, enumerable: true });" +
-            "      Object.defineProperty(window, 'parent', { get: function() { return window; }, configurable: false, enumerable: true });" +
-            "      Object.defineProperty(window, 'frameElement', { get: function() { return null; }, configurable: false, enumerable: true });" +
-            "    } else {" +
-            "      Object.defineProperty(window, 'top', { get: function() { return rootSameOrigin; }, configurable: false, enumerable: true });" +
-            "    }" +
-            "  } catch(err) {}" +
+            "    Object.defineProperty(window, 'top', { get: function() { return window; }, configurable: false, enumerable: true });" +
+            "    Object.defineProperty(window, 'parent', { get: function() { return window; }, configurable: false, enumerable: true });" +
+            "    Object.defineProperty(window, 'frameElement', { get: function() { return null; }, configurable: false, enumerable: true });" +
+            "  } catch(e) {}" +
             "})();" +
             "</script>";
 
@@ -689,26 +695,28 @@ public class MainActivity extends BridgeActivity {
                 if (mimeType.toLowerCase(Locale.ROOT).contains("html")) {
                     String html = body.string();
 
+                    String shimToInject = urlStr.toLowerCase(Locale.ROOT).contains("roclassicidle") ? RAGIDLE_SHIM_SCRIPT : STANDALONE_SHIM_SCRIPT;
+
                     // Inject standalone Chrome top-level window emulation at the top of <head>
                     int headIndex = html.toLowerCase(Locale.ROOT).indexOf("<head");
                     if (headIndex != -1) {
                         int closeHead = html.indexOf(">", headIndex);
                         if (closeHead != -1) {
-                            html = html.substring(0, closeHead + 1) + STANDALONE_SHIM_SCRIPT + html.substring(closeHead + 1);
+                            html = html.substring(0, closeHead + 1) + shimToInject + html.substring(closeHead + 1);
                         } else {
-                            html = STANDALONE_SHIM_SCRIPT + html;
+                            html = shimToInject + html;
                         }
                     } else {
                         int htmlIndex = html.toLowerCase(Locale.ROOT).indexOf("<html");
                         if (htmlIndex != -1) {
                             int tagClose = html.indexOf(">", htmlIndex);
                             if (tagClose != -1) {
-                                html = html.substring(0, tagClose + 1) + STANDALONE_SHIM_SCRIPT + html.substring(tagClose + 1);
+                                html = html.substring(0, tagClose + 1) + shimToInject + html.substring(tagClose + 1);
                             } else {
-                                html = STANDALONE_SHIM_SCRIPT + html;
+                                html = shimToInject + html;
                             }
                         } else {
-                            html = STANDALONE_SHIM_SCRIPT + html;
+                            html = shimToInject + html;
                         }
                     }
 
