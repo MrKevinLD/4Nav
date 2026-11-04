@@ -5,6 +5,7 @@ declare global {
     AndroidBridge?: {
       setKeepScreenOn: (keepOn: boolean) => void;
       clearMemoryCache: () => void;
+      cleanGhostPopups?: () => void;
     };
   }
 }

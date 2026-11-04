@@ -134,10 +134,11 @@ export const App: React.FC = () => {
   }, [addTab, closeTab, currentTab, tabs.length, settings.maximizeShortcuts, toggleMaximizePane]);
 
   const handleClearRamCache = useCallback(async () => {
-    // 1. Android Native WebView Cache & GC
+    // 1. Android Native WebView Cache, GC & Ghost Popup Cleaner
     if (typeof window !== 'undefined' && window.AndroidBridge?.clearMemoryCache) {
       try {
         window.AndroidBridge.clearMemoryCache();
+        window.AndroidBridge.cleanGhostPopups?.();
       } catch {}
     }
 

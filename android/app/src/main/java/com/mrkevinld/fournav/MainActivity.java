@@ -44,6 +44,86 @@ public class MainActivity extends BridgeActivity {
     private static String appUserAgent;
     private FourNavWebViewClient customWebViewClient;
 
+    private static final String GHOST_CLEANER_SCRIPT =
+            "(function() {" +
+            "  if (window.__4navGhostCleaner) return;" +
+            "  window.__4navGhostCleaner = true;" +
+            "  function isCloseLike(el) {" +
+            "    if (!el) return false;" +
+            "    var text = (el.innerText || el.textContent || '').trim().toLowerCase();" +
+            "    var cls = (el.className && typeof el.className === 'string') ? el.className.toLowerCase() : '';" +
+            "    var id = (el.id || '').toLowerCase();" +
+            "    var label = (el.getAttribute('aria-label') || el.getAttribute('title') || '').toLowerCase();" +
+            "    if (cls.indexOf('close') !== -1 || cls.indexOf('cancel') !== -1 || cls.indexOf('exit') !== -1 || cls.indexOf('fechar') !== -1) return true;" +
+            "    if (id.indexOf('close') !== -1 || id.indexOf('cancel') !== -1 || id.indexOf('exit') !== -1 || id.indexOf('fechar') !== -1) return true;" +
+            "    if (label.indexOf('fechar') !== -1 || label.indexOf('sair') !== -1 || label.indexOf('close') !== -1 || label.indexOf('cancel') !== -1) return true;" +
+            "    if (text === 'continuar a jogar' || text === 'fechar jogo' || text === 'fechar' || text === 'cancelar' || text === '✕' || text === '×' || text === 'x') return true;" +
+            "    return false;" +
+            "  }" +
+            "  function getEnclosingModal(target) {" +
+            "    if (!target) return null;" +
+            "    var curr = target;" +
+            "    while (curr && curr !== document.body && curr !== document.documentElement) {" +
+            "      if (curr.id === 'Escape' || curr.id === 'WinLogin' || curr.id === 'WinPopup' || curr.id === 'WinMSG' || curr.id === 'WinError') return curr;" +
+            "      if (curr.classList && (curr.classList.contains('modal') || curr.classList.contains('popup') || curr.classList.contains('overlay') || curr.classList.contains('ri-window') || curr.classList.contains('wl-window') || curr.classList.contains('ri-janela-corpo'))) return curr;" +
+            "      if (curr.getAttribute && curr.getAttribute('role') === 'dialog') return curr;" +
+            "      if (curr.parentNode) { curr = curr.parentNode; } else if (curr.host) { return curr.host; } else { break; }" +
+            "    }" +
+            "    return null;" +
+            "  }" +
+            "  function checkAndDismissGhost(e) {" +
+            "    var target = e.target;" +
+            "    if (!target) return;" +
+            "    var btn = target.closest ? target.closest('button, [role=\"button\"], a, input[type=\"button\"], .btn, .ri-btn, .close, .exit, .cancel') : target;" +
+            "    if (!btn && isCloseLike(target)) btn = target;" +
+            "    if (!btn || !isCloseLike(btn)) return;" +
+            "    var modal = getEnclosingModal(btn);" +
+            "    if (!modal && btn.getRootNode && btn.getRootNode().host) { modal = btn.getRootNode().host; }" +
+            "    if (modal) {" +
+            "      setTimeout(function() {" +
+            "        try {" +
+            "          if (modal && modal.parentNode) {" +
+            "            var style = window.getComputedStyle ? window.getComputedStyle(modal) : modal.style;" +
+            "            if (style && style.display !== 'none' && style.visibility !== 'hidden') {" +
+            "              modal.style.setProperty('display', 'none', 'important');" +
+            "              modal.style.setProperty('pointer-events', 'none', 'important');" +
+            "              modal.classList.remove('ri-aberta');" +
+            "              if (modal.id === 'Escape' || modal.classList.contains('popup') || modal.classList.contains('overlay')) {" +
+            "                modal.remove();" +
+            "              }" +
+            "            }" +
+            "          }" +
+            "        } catch (err) {}" +
+            "      }, 180);" +
+            "    }" +
+            "  }" +
+            "  document.addEventListener('click', checkAndDismissGhost, true);" +
+            "  document.addEventListener('touchend', checkAndDismissGhost, true);" +
+            "  window.__sweepAllGhostElements = function() {" +
+            "    var selectors = ['#Escape', '#WinPopup', '#WinMSG', '#WinError', '.modal.fade:not(.show)', '.modal-backdrop', '.overlay[style*=\"opacity: 0\"]'];" +
+            "    selectors.forEach(function(sel) {" +
+            "      try {" +
+            "        document.querySelectorAll(sel).forEach(function(el) {" +
+            "          el.style.setProperty('display', 'none', 'important');" +
+            "          el.style.setProperty('pointer-events', 'none', 'important');" +
+            "        });" +
+            "      } catch (e) {}" +
+            "    });" +
+            "  };" +
+            "})();";
+
+    public void injectGhostPopupCleaner(WebView webView) {
+        if (webView == null) return;
+        runOnUiThread(() -> {
+            try {
+                webView.evaluateJavascript(GHOST_CLEANER_SCRIPT, null);
+                logMessage("Ghost popup cleaner evaluated on WebView");
+            } catch (Exception e) {
+                logMessage("evaluateJavascript error: " + e.getMessage());
+            }
+        });
+    }
+
     public static void logMessage(String msg) {
         Log.d(TAG, msg);
         synchronized (RECENT_LOGS) {
@@ -77,6 +157,16 @@ public class MainActivity extends BridgeActivity {
                 }
                 System.gc();
                 logMessage("Native memory cache cleared & System.gc() called");
+            });
+        }
+
+        @android.webkit.JavascriptInterface
+        public void cleanGhostPopups() {
+            runOnUiThread(() -> {
+                Bridge b = getBridge();
+                if (b != null && b.getWebView() != null) {
+                    injectGhostPopupCleaner(b.getWebView());
+                }
             });
         }
 
@@ -243,6 +333,12 @@ public class MainActivity extends BridgeActivity {
                     });
 
                     popupWebView.setWebViewClient(new BridgeWebViewClient(getBridge()) {
+                        @Override
+                        public void onPageFinished(WebView view, String url) {
+                            super.onPageFinished(view, url);
+                            injectGhostPopupCleaner(view);
+                        }
+
                         @Override
                         public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                             return false;
@@ -550,6 +646,22 @@ public class MainActivity extends BridgeActivity {
             responseHeaders.put("Access-Control-Allow-Credentials", "true");
             responseHeaders.put("Cross-Origin-Resource-Policy", "cross-origin");
 
+            byte[] responseBytes = new byte[0];
+            if (body != null) {
+                if (mimeType.toLowerCase(Locale.ROOT).contains("html")) {
+                    String html = body.string();
+                    String scriptTag = "<script>" + GHOST_CLEANER_SCRIPT + "</script>";
+                    if (html.contains("</body>")) {
+                        html = html.replace("</body>", scriptTag + "</body>");
+                    } else {
+                        html += scriptTag;
+                    }
+                    responseBytes = html.getBytes(StandardCharsets.UTF_8);
+                } else {
+                    responseBytes = body.bytes();
+                }
+            }
+
             logMessage("OkHttp unblocked frame: " + urlStr + " (code: " + response.code() + ")");
 
             return new WebResourceResponse(
@@ -558,7 +670,7 @@ public class MainActivity extends BridgeActivity {
                     response.code(),
                     response.message().isEmpty() ? "OK" : response.message(),
                     responseHeaders,
-                    body != null ? body.byteStream() : new ByteArrayInputStream(new byte[0])
+                    new ByteArrayInputStream(responseBytes)
             );
         } catch (Exception ex) {
             logMessage("OkHttp error for " + urlStr + ": " + ex.getClass().getSimpleName() + " - " + ex.getMessage());
@@ -584,6 +696,15 @@ public class MainActivity extends BridgeActivity {
         public FourNavWebViewClient(Bridge bridge, MainActivity activity) {
             super(bridge);
             this.activityRef = new java.lang.ref.WeakReference<>(activity);
+        }
+
+        @Override
+        public void onPageFinished(WebView view, String url) {
+            super.onPageFinished(view, url);
+            MainActivity activity = activityRef.get();
+            if (activity != null) {
+                activity.injectGhostPopupCleaner(view);
+            }
         }
 
         @Override
