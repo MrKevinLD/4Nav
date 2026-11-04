@@ -593,6 +593,18 @@ public class MainActivity extends BridgeActivity {
             }
         }
 
+        // Automatic redirect for RagIdle root/api.html to quadro.html (the clean game engine)
+        if (host != null && host.equalsIgnoreCase("play.roclassicidle.com.br")) {
+            String path = uri.getPath();
+            if (path == null || path.isEmpty() || path.equals("/") || path.equalsIgnoreCase("/api.html")) {
+                Map<String, String> redirHeaders = new HashMap<>();
+                redirHeaders.put("Location", "https://play.roclassicidle.com.br/quadro.html");
+                redirHeaders.put("Access-Control-Allow-Origin", "*");
+                logMessage("Redirecting RagIdle root to quadro.html");
+                return new WebResourceResponse("text/plain", "utf-8", 302, "Found", redirHeaders, new ByteArrayInputStream(new byte[0]));
+            }
+        }
+
         // Let Chromium handle static binary/resource assets directly for optimal performance
         if (isStaticAsset(uri)) {
             return null;
