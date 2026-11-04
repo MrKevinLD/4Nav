@@ -102,6 +102,7 @@ public class MainActivity extends BridgeActivity {
             WebView webView = bridge.getWebView();
             WebView.setWebContentsDebuggingEnabled(true);
             webView.setBackgroundColor(android.graphics.Color.parseColor("#090A0C"));
+            webView.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null);
             WebSettings settings = webView.getSettings();
 
             settings.setJavaScriptEnabled(true);
@@ -112,7 +113,7 @@ public class MainActivity extends BridgeActivity {
             settings.setAllowFileAccessFromFileURLs(true);
             settings.setAllowUniversalAccessFromFileURLs(true);
             settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
-            settings.setSupportMultipleWindows(false);
+            settings.setSupportMultipleWindows(true);
             settings.setJavaScriptCanOpenWindowsAutomatically(true);
             settings.setMediaPlaybackRequiresUserGesture(false);
             settings.setSafeBrowsingEnabled(false);
@@ -154,10 +155,147 @@ public class MainActivity extends BridgeActivity {
                     }
                     return super.onConsoleMessage(consoleMessage);
                 }
+
+                @Override
+                public boolean onCreateWindow(WebView view, boolean isDialog, boolean isUserGesture, android.os.Message resultMsg) {
+                    if (resultMsg == null) return false;
+                    logMessage("WebChromeClient: onCreateWindow triggered (isDialog=" + isDialog + ", isUserGesture=" + isUserGesture + ")");
+
+                    WebView popupWebView = new WebView(MainActivity.this);
+                    configureChildWebSettings(popupWebView);
+
+                    android.app.Dialog popupDialog = new android.app.Dialog(MainActivity.this, android.R.style.Theme_DeviceDefault_Dialog_NoActionBar);
+
+                    android.widget.LinearLayout container = new android.widget.LinearLayout(MainActivity.this);
+                    container.setOrientation(android.widget.LinearLayout.VERTICAL);
+                    container.setBackgroundColor(android.graphics.Color.parseColor("#090A0C"));
+
+                    android.widget.RelativeLayout header = new android.widget.RelativeLayout(MainActivity.this);
+                    header.setBackgroundColor(android.graphics.Color.parseColor("#111317"));
+                    int p10 = (int) (10 * getResources().getDisplayMetrics().density);
+                    header.setPadding(p10, p10, p10, p10);
+
+                    android.widget.TextView titleView = new android.widget.TextView(MainActivity.this);
+                    titleView.setText("Janela Flutuante");
+                    titleView.setTextColor(android.graphics.Color.parseColor("#F3F4F6"));
+                    titleView.setTextSize(13);
+                    android.widget.RelativeLayout.LayoutParams titleParams = new android.widget.RelativeLayout.LayoutParams(
+                            android.widget.RelativeLayout.LayoutParams.WRAP_CONTENT,
+                            android.widget.RelativeLayout.LayoutParams.WRAP_CONTENT
+                    );
+                    titleParams.addRule(android.widget.RelativeLayout.ALIGN_PARENT_LEFT);
+                    titleParams.addRule(android.widget.RelativeLayout.CENTER_VERTICAL);
+                    header.addView(titleView, titleParams);
+
+                    android.widget.Button closeBtn = new android.widget.Button(MainActivity.this);
+                    closeBtn.setText("✕ Fechar");
+                    closeBtn.setTextColor(android.graphics.Color.parseColor("#EF4444"));
+                    closeBtn.setBackgroundColor(android.graphics.Color.parseColor("#181B21"));
+                    closeBtn.setTextSize(12);
+                    android.widget.RelativeLayout.LayoutParams btnParams = new android.widget.RelativeLayout.LayoutParams(
+                            android.widget.RelativeLayout.LayoutParams.WRAP_CONTENT,
+                            android.widget.RelativeLayout.LayoutParams.WRAP_CONTENT
+                    );
+                    btnParams.addRule(android.widget.RelativeLayout.ALIGN_PARENT_RIGHT);
+                    btnParams.addRule(android.widget.RelativeLayout.CENTER_VERTICAL);
+                    header.addView(closeBtn, btnParams);
+
+                    container.addView(header, new android.widget.LinearLayout.LayoutParams(
+                            android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                            android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                    ));
+
+                    container.addView(popupWebView, new android.widget.LinearLayout.LayoutParams(
+                            android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                            android.widget.LinearLayout.LayoutParams.MATCH_PARENT
+                    ));
+
+                    popupDialog.setContentView(container);
+                    if (popupDialog.getWindow() != null) {
+                        popupDialog.getWindow().setLayout(
+                                (int) (getResources().getDisplayMetrics().widthPixels * 0.92),
+                                (int) (getResources().getDisplayMetrics().heightPixels * 0.85)
+                        );
+                    }
+
+                    closeBtn.setOnClickListener(v -> {
+                        if (popupDialog.isShowing()) {
+                            popupDialog.dismiss();
+                        }
+                        popupWebView.destroy();
+                    });
+
+                    popupDialog.setOnDismissListener(dialogInterface -> {
+                        try {
+                            popupWebView.destroy();
+                        } catch (Exception ignored) {}
+                    });
+
+                    popupWebView.setWebChromeClient(new WebChromeClient() {
+                        @Override
+                        public void onCloseWindow(WebView window) {
+                            logMessage("popupWebView onCloseWindow triggered");
+                            if (popupDialog.isShowing()) {
+                                popupDialog.dismiss();
+                            }
+                            window.destroy();
+                        }
+                    });
+
+                    popupWebView.setWebViewClient(new BridgeWebViewClient(getBridge()) {
+                        @Override
+                        public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                            return false;
+                        }
+
+                        @Override
+                        public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+                            if (request != null && request.getUrl() != null) {
+                                WebResourceResponse resp = processIntercept(request.getUrl().toString(), request.getMethod(), request.getRequestHeaders());
+                                if (resp != null) return resp;
+                            }
+                            return super.shouldInterceptRequest(view, request);
+                        }
+                    });
+
+                    popupDialog.show();
+
+                    WebView.WebViewTransport transport = (WebView.WebViewTransport) resultMsg.obj;
+                    transport.setWebView(popupWebView);
+                    resultMsg.sendToTarget();
+                    return true;
+                }
             });
 
             applyCustomWebViewClient();
         }
+    }
+
+    private void configureChildWebSettings(WebView childWebView) {
+        childWebView.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null);
+        childWebView.setBackgroundColor(android.graphics.Color.parseColor("#090A0C"));
+        WebSettings s = childWebView.getSettings();
+        s.setJavaScriptEnabled(true);
+        s.setDomStorageEnabled(true);
+        s.setDatabaseEnabled(true);
+        s.setAllowFileAccess(true);
+        s.setAllowContentAccess(true);
+        s.setAllowFileAccessFromFileURLs(true);
+        s.setAllowUniversalAccessFromFileURLs(true);
+        s.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        s.setSupportMultipleWindows(true);
+        s.setJavaScriptCanOpenWindowsAutomatically(true);
+        s.setMediaPlaybackRequiresUserGesture(false);
+        s.setSafeBrowsingEnabled(false);
+        s.setGeolocationEnabled(true);
+        s.setTextZoom(100);
+        s.setUseWideViewPort(true);
+        s.setLoadWithOverviewMode(true);
+        s.setCacheMode(WebSettings.LOAD_DEFAULT);
+        if (appUserAgent != null) {
+            s.setUserAgentString(appUserAgent);
+        }
+        CookieManager.getInstance().setAcceptThirdPartyCookies(childWebView, true);
     }
 
     @Override
@@ -182,7 +320,8 @@ public class MainActivity extends BridgeActivity {
         if (bridge != null && bridge.getWebView() != null) {
             WebView wv = bridge.getWebView();
             try {
-                wv.onPause();
+                // Keep JS timers and game animation execution active in background across all windows
+                wv.resumeTimers();
             } catch (Exception ignored) {}
         }
     }

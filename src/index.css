@@ -51,6 +51,12 @@
   }
 }
 
+/* Mobile Touch & Pointer Interaction Optimization */
+iframe {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
 /* Mobile Eco & Battery Saver Mode */
 .mobile-eco-mode iframe {
   filter: brightness(0.9) contrast(1.02);

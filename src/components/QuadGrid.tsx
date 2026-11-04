@@ -132,7 +132,7 @@ export const QuadGrid: React.FC<QuadGridProps> = ({
     return (
       <main
         ref={containerRef}
-        className="relative flex-1 w-full h-full bg-[#090A0C] overflow-hidden select-none"
+        className="relative flex-1 w-full h-full bg-[#090A0C] overflow-hidden"
       >
         {renderQuadrant(paneIds[0], 0)}
       </main>
@@ -145,7 +145,7 @@ export const QuadGrid: React.FC<QuadGridProps> = ({
     return (
       <main
         ref={containerRef}
-        className="relative flex-1 w-full h-full bg-[#090A0C] overflow-hidden select-none"
+        className="relative flex-1 w-full h-full bg-[#090A0C] overflow-hidden"
       >
         {dragAxis && <div className="absolute inset-0 z-40 cursor-move" />}
 
@@ -235,7 +235,7 @@ export const QuadGrid: React.FC<QuadGridProps> = ({
     return (
       <main
         ref={containerRef}
-        className="relative flex-1 w-full h-full bg-[#090A0C] overflow-hidden select-none"
+        className="relative flex-1 w-full h-full bg-[#090A0C] overflow-hidden"
       >
         {dragAxis && <div className="absolute inset-0 z-40 cursor-move" />}
 
@@ -328,7 +328,7 @@ export const QuadGrid: React.FC<QuadGridProps> = ({
   return (
     <main
       ref={containerRef}
-      className="relative flex-1 w-full h-full bg-[#090A0C] overflow-hidden select-none"
+      className="relative flex-1 w-full h-full bg-[#090A0C] overflow-hidden"
     >
       {maximizedPane && (
         <div className="absolute top-2 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 px-3 py-1 bg-[#090A0C]/90 border border-[#3B82F6] rounded-[2px] shadow-2xl backdrop-blur text-[11px] text-[#F3F4F6]">

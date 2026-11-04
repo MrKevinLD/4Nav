@@ -310,6 +310,7 @@ export const QuadrantPane: React.FC<QuadrantPaneProps> = ({
   return (
     <section
       onMouseDown={onFocusPane}
+      onTouchStart={onFocusPane}
       aria-label={`Quadrante ${pane.quadrantNumber} - ${pane.positionLabel}`}
       className={`relative w-full h-full flex flex-col bg-[#090A0C] overflow-hidden border transition-colors ${
         isActive ? 'border-[#3B82F6]' : 'border-[#232832]'
@@ -421,7 +422,8 @@ export const QuadrantPane: React.FC<QuadrantPaneProps> = ({
                 : 'allow-same-origin allow-scripts allow-forms allow-popups allow-modals allow-presentation'
             }
             allow="autoplay; fullscreen; clipboard-read; clipboard-write; wake-lock"
-            className="w-full h-full border-0 bg-[#090A0C]"
+            className="w-full h-full border-0 bg-[#090A0C] pointer-events-auto"
+            style={{ touchAction: 'manipulation' }}
           />
         )}
 

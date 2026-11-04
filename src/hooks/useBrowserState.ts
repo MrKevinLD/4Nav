@@ -453,7 +453,10 @@ export function useBrowserState() {
 
   const setActivePane = useCallback((tabId: string, paneId: string) => {
     setTabs((prev) =>
-      prev.map((tab) => (tab.id === tabId ? { ...tab, activePane: paneId } : tab))
+      prev.map((tab) => {
+        if (tab.id !== tabId || tab.activePane === paneId) return tab;
+        return { ...tab, activePane: paneId };
+      })
     );
   }, []);
 
