@@ -275,10 +275,6 @@ public class MainActivity extends BridgeActivity {
         String path = uri.getPath();
         if (path == null) return false;
         String lower = path.toLowerCase(Locale.ROOT);
-        // Do NOT bypass carregar-jogo - we need to patch its iframe handshake!
-        if (lower.contains("carregar-jogo")) {
-            return false;
-        }
 
         String host = uri.getHost();
         if (host != null && host.toLowerCase(Locale.ROOT).contains("assets.roclassicidle.com.br")) {
@@ -394,30 +390,9 @@ public class MainActivity extends BridgeActivity {
 
             byte[] bodyBytes = body != null ? body.bytes() : new byte[0];
 
-            // Special handling for carregar-jogo.js: patch iframe detection to prevent infinite loading
-            if (urlStr.contains("carregar-jogo") && bodyBytes.length > 0) {
-                try {
-                    String charsetName = encoding != null && !encoding.isEmpty() ? encoding : "UTF-8";
-                    String js = new String(bodyBytes, charsetName);
-
-                    // Force PAPEL_DA_PAGINA to 'app' rather than 'quadro'
-                    js = js.replace("window.top !== window.self ? 'quadro'", "false ? 'quadro'");
-                    js = js.replace("PAPEL_DA_PAGINA === 'quadro' ? null :", "false ? null :");
-                    js = js.replace("var appName = PAPEL_DA_PAGINA === 'quadro' ? null : APP_DA_URL || 'ONLINE';", "var appName = APP_DA_URL || 'ONLINE';");
-
-                    bodyBytes = js.getBytes(StandardCharsets.UTF_8);
-                    encoding = "utf-8";
-                    logMessage("Patched carregar-jogo.js: neutralized iframe stall & set appName to ONLINE");
-                } catch (Exception e) {
-                    logMessage("carregar-jogo.js patch error: " + e.getMessage());
-                }
-            }
-
-            boolean isRagIdle = host != null && host.toLowerCase(Locale.ROOT).contains("roclassicidle.com.br");
-
-            // ONLY modify HTML for RagIdle to inject its base path and server configs.
-            // NEVER inject scripts or modify HTML for Google or general sites (prevents triggering BotGuard / reCAPTCHA).
-            if (isRagIdle && mimeType.toLowerCase(Locale.ROOT).contains("html") && bodyBytes.length > 0) {
+            // Only sanitize HTML documents: remove meta frame-busting tags and add base href for relative assets
+            // NEVER inject scripts or mutate website code/DOM directly
+            if (mimeType.toLowerCase(Locale.ROOT).contains("html") && bodyBytes.length > 0) {
                 try {
                     String charsetName = encoding != null && !encoding.isEmpty() ? encoding : "UTF-8";
                     String html = new String(bodyBytes, charsetName);
@@ -441,124 +416,17 @@ public class MainActivity extends BridgeActivity {
                     }
                     String baseHref = cleanUrl.endsWith("/") ? cleanUrl : cleanUrl + "/";
 
-                    String roConfigPreload = "try {"
-                            + "window.ROConfigLocal = window.ROConfigLocal || {"
-                            + "cadastroUrl: 'https://api.roclassicidle.com.br',"
-                            + "enableHudAdaptavel: true,"
-                            + "remoteClient: 'https://assets.roclassicidle.com.br/',"
-                            + "servers: [{"
-                            + "display: 'Rag Idle — v0 de teste',"
-                            + "desc: 'cadastre-se com _M ou _F no fim do usuario',"
-                            + "address: '127.0.0.1',"
-                            + "port: 6900,"
-                            + "packetver: 20211103,"
-                            + "renewal: true,"
-                            + "version: 55,"
-                            + "langtype: 12,"
-                            + "packetKeys: false,"
-                            + "socketProxy: 'wss://ws.roclassicidle.com.br',"
-                            + "remoteClient: 'https://assets.roclassicidle.com.br/',"
-                            + "worldMapSettings: { episode: 21 },"
-                            + "adminList: []"
-                            + "}],"
-                            + "skipIntro: true,"
-                            + "skipServerList: true,"
-                            + "loadLua: false,"
-                            + "packetDump: false,"
-                            + "development: false"
-                            + "};"
-                            + "} catch(e) {}";
-
-                    String dialogFixScript = "(function(){"
-                            + "function dismissEscape(){"
-                            + "try{"
-                            + "var el=document.getElementById('Escape')||document.querySelector('[data-gui-component=\"Escape\"]');"
-                            + "if(el){el.style.display='none';}"
-                            + "}catch(e){}"
-                            + "}"
-                            + "function removeLoginGhosts(){"
-                            + "try{"
-                            + "var els=document.querySelectorAll('#WinLogin,#WinLoginV2,#WinLoginV3,[data-gui-component^=\"WinLogin\"]');"
-                            + "for(var i=0;i<els.length;i++){"
-                            + "els[i].style.display='none';"
-                            + "try{els[i].remove();}catch(e){}"
-                            + "}"
-                            + "}catch(e){}"
-                            + "}"
-                            + "function checkGameAndClean(){"
-                            + "var inGame=document.querySelector('[data-gui-component=\"BasicInfo\"],[data-gui-component=\"ChatBox\"],[data-gui-component=\"SkillList\"],#robrowser-canvas-overlay,.ri-hud-mobile');"
-                            + "if(inGame){removeLoginGhosts();}"
-                            + "}"
-                            + "setInterval(checkGameAndClean,700);"
-                            + "function handleInteraction(e){"
-                            + "try{"
-                            + "var t=e.target;"
-                            + "if(!t)return;"
-                            + "var txt=(t.textContent||'').trim();"
-                            + "var cls=t.className?String(t.className):'';"
-                            + "var id=t.id?String(t.id):'';"
-                            + "if(txt==='Continuar a Jogar'||cls.indexOf('cancel')!==-1||cls.indexOf('fechar-celular')!==-1){"
-                            + "dismissEscape();"
-                            + "}"
-                            + "if(id==='btn_connect'||txt.indexOf('Entrar em Midgard')!==-1||(cls.indexOf('connect')!==-1&&cls.indexOf('btn')!==-1)){"
-                            + "setTimeout(removeLoginGhosts,800);"
-                            + "setTimeout(removeLoginGhosts,2000);"
-                            + "setTimeout(removeLoginGhosts,4000);"
-                            + "}"
-                            + "}catch(err){}"
-                            + "}"
-                            + "window.addEventListener('click',handleInteraction,true);"
-                            + "window.addEventListener('touchend',handleInteraction,true);"
-                            + "window.addEventListener('webglcontextlost',function(e){try{e.preventDefault();}catch(err){}},false);"
-                            + "document.addEventListener('visibilitychange',function(){"
-                            + "if(document.visibilityState==='visible'){"
-                            + "try{window.dispatchEvent(new Event('resize'));}catch(e){}"
-                            + "}"
-                            + "});"
-                            + "var origAttach=Element.prototype.attachShadow;"
-                            + "if(origAttach){"
-                            + "Element.prototype.attachShadow=function(init){"
-                            + "var shadow=origAttach.call(this,init);"
-                            + "try{"
-                            + "shadow.addEventListener('click',handleInteraction,true);"
-                            + "shadow.addEventListener('touchend',handleInteraction,true);"
-                            + "}catch(e){}"
-                            + "return shadow;"
-                            + "};"
-                            + "}"
-                            + "})();";
-
-                    String injectedHead = "<head><base href=\"" + baseHref + "\"><script>"
-                            + "(function(){"
-                            + "var _f=window.fetch;"
-                            + "if(_f){"
-                            + "window.fetch=function(input,init){"
-                            + "try{"
-                            + "var u=typeof input==='string'?input:(input&&input.url?input.url:'');"
-                            + "if(u&&u.indexOf('assets.roclassicidle.com.br')!==-1&&(u.endsWith('assets.roclassicidle.com.br/')||u.endsWith('assets.roclassicidle.com.br')||u.indexOf('/?')!==-1)){"
-                            + "return Promise.resolve(new Response('OK',{status:200,statusText:'OK',headers:{'Content-Type':'text/plain','Access-Control-Allow-Origin':'*'}}));"
-                            + "}"
-                            + "}catch(e){}"
-                            + "return _f.apply(this,arguments);"
-                            + "};"
-                            + "}"
-                            + "})();"
-                            + dialogFixScript
-                            + roConfigPreload
-                            + "</script>";
-
+                    String baseTag = "<head><base href=\"" + baseHref + "\">";
                     if (html.contains("<head>")) {
-                        html = html.replaceFirst("(?i)<head>", injectedHead);
+                        html = html.replaceFirst("(?i)<head>", baseTag);
                     } else if (html.contains("<html>")) {
-                        html = html.replaceFirst("(?i)<html>", "<html>" + injectedHead + "</head>");
-                    } else {
-                        html = injectedHead + "</head>" + html;
+                        html = html.replaceFirst("(?i)<html>", "<html>" + baseTag + "</head>");
                     }
 
                     bodyBytes = html.getBytes(StandardCharsets.UTF_8);
                     encoding = "utf-8";
                 } catch (Exception e) {
-                    logMessage("RagIdle HTML mod error: " + e.getMessage());
+                    logMessage("HTML sanitization error: " + e.getMessage());
                 }
             }
 
