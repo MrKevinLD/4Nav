@@ -1,9 +1,17 @@
 package com.mrkevinld.fournav;
 
+import android.app.AlertDialog;
+import android.graphics.Color;
+import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
+import android.util.TypedValue;
+import android.view.Gravity;
+import android.view.View;
+import android.view.ViewGroup;
 import android.webkit.ConsoleMessage;
 import android.webkit.CookieManager;
 import android.webkit.RenderProcessGoneDetail;
@@ -14,6 +22,11 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
+import android.webkit.WebViewClient;
+import android.widget.EditText;
+import android.widget.FrameLayout;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 import com.getcapacitor.Bridge;
 import com.getcapacitor.BridgeActivity;
 import com.getcapacitor.BridgeWebViewClient;
@@ -44,27 +57,18 @@ public class MainActivity extends BridgeActivity {
     private static String appUserAgent;
     private FourNavWebViewClient customWebViewClient;
 
-    private static final String RAGIDLE_SHIM_SCRIPT =
-            "<script>" +
-            "(function() {" +
-            "  try {" +
-            "    Object.defineProperty(window, 'top', { get: function() { return window; }, configurable: false, enumerable: true });" +
-            "    Object.defineProperty(window, 'parent', { get: function() { return window; }, configurable: false, enumerable: true });" +
-            "    Object.defineProperty(window, 'frameElement', { get: function() { return null; }, configurable: false, enumerable: true });" +
-            "    var origGet = URLSearchParams.prototype.get;" +
-            "    URLSearchParams.prototype.get = function(key) {" +
-            "      if (key === 'app') return 'ONLINE';" +
-            "      return origGet.apply(this, arguments);" +
-            "    };" +
-            "    var origHas = URLSearchParams.prototype.has;" +
-            "    URLSearchParams.prototype.has = function(key) {" +
-            "      if (key === 'app') return true;" +
-            "      return origHas.apply(this, arguments);" +
-            "    };" +
-            "    window.RagIdleCascaDeProducao = false;" +
-            "  } catch(e) {}" +
-            "})();" +
-            "</script>";
+    // Native Opera GX-style Multi-WebView Dual Containers
+    private FrameLayout nativeDualContainer;
+    private WebView nativeWebView1;
+    private WebView nativeWebView2;
+    private View dividerView;
+    private LinearLayout nativeHeaderBar;
+    private LinearLayout nativeFooterBar;
+    private TextView floatingRestoreBtn;
+    private boolean nativeBarsVisible = true;
+    private int currentLayoutMode = 0; // 0 = 50:50 Vertical, 1 = J1, 2 = J2
+    private String urlPane1 = "https://play.roclassicidle.com.br/";
+    private String urlPane2 = "https://play.roclassicidle.com.br/";
 
     private static final String STANDALONE_SHIM_SCRIPT =
             "<script>" +
@@ -219,6 +223,26 @@ public class MainActivity extends BridgeActivity {
             synchronized (RECENT_LOGS) {
                 return new JSONArray(RECENT_LOGS).toString();
             }
+        }
+
+        @android.webkit.JavascriptInterface
+        public void showNativeDualScreen() {
+            runOnUiThread(() -> {
+                if (nativeDualContainer != null) {
+                    nativeDualContainer.setVisibility(View.VISIBLE);
+                } else {
+                    setupNativeDualWebViews();
+                }
+            });
+        }
+
+        @android.webkit.JavascriptInterface
+        public void hideNativeDualScreen() {
+            runOnUiThread(() -> {
+                if (nativeDualContainer != null) {
+                    nativeDualContainer.setVisibility(View.GONE);
+                }
+            });
         }
     }
 
@@ -409,6 +433,327 @@ public class MainActivity extends BridgeActivity {
 
             applyCustomWebViewClient();
         }
+
+        // Setup Opera GX-style Native Multi-WebView Split Screen
+        setupNativeDualWebViews();
+    }
+
+    private int dpToPx(int dp) {
+        return (int) (dp * getResources().getDisplayMetrics().density + 0.5f);
+    }
+
+    private TextView createStyledButton(String text, String textColorHex, String bgHex, Runnable onClick) {
+        TextView btn = new TextView(this);
+        btn.setText(text);
+        btn.setTextColor(Color.parseColor(textColorHex));
+        btn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        btn.setTypeface(null, Typeface.BOLD);
+        btn.setGravity(Gravity.CENTER);
+        int padH = dpToPx(8);
+        int padV = dpToPx(5);
+        btn.setPadding(padH, padV, padH, padV);
+
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(Color.parseColor(bgHex));
+        bg.setCornerRadius(dpToPx(3));
+        bg.setStroke(dpToPx(1), Color.parseColor("#232832"));
+        btn.setBackground(bg);
+
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+        );
+        lp.leftMargin = dpToPx(3);
+        btn.setLayoutParams(lp);
+
+        btn.setOnClickListener(v -> onClick.run());
+        return btn;
+    }
+
+    private void setupNativeDualWebViews() {
+        if (nativeDualContainer != null) return;
+
+        runOnUiThread(() -> {
+            ViewGroup rootView = findViewById(android.R.id.content);
+            if (rootView == null) return;
+
+            nativeDualContainer = new FrameLayout(this);
+            nativeDualContainer.setBackgroundColor(Color.parseColor("#090A0C"));
+
+            LinearLayout mainLayout = new LinearLayout(this);
+            mainLayout.setOrientation(LinearLayout.VERTICAL);
+            mainLayout.setLayoutParams(new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+            ));
+
+            // 1. TOP CONTROL BAR
+            nativeHeaderBar = new LinearLayout(this);
+            nativeHeaderBar.setOrientation(LinearLayout.HORIZONTAL);
+            nativeHeaderBar.setBackgroundColor(Color.parseColor("#0D1017"));
+            nativeHeaderBar.setGravity(Gravity.CENTER_VERTICAL);
+            int padH = dpToPx(8);
+            int padV = dpToPx(6);
+            nativeHeaderBar.setPadding(padH, padV, padH, padV);
+            nativeHeaderBar.setLayoutParams(new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+            ));
+
+            TextView titleView = new TextView(this);
+            titleView.setText("4NAV DUAL");
+            titleView.setTextColor(Color.parseColor("#3B82F6"));
+            titleView.setTypeface(null, Typeface.BOLD);
+            titleView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+            nativeHeaderBar.addView(titleView);
+
+            View headerSpacer = new View(this);
+            headerSpacer.setLayoutParams(new LinearLayout.LayoutParams(0, 0, 1.0f));
+            nativeHeaderBar.addView(headerSpacer);
+
+            TextView btnSplit = createStyledButton("50:50", "#EAB308", "#1E232D", () -> switchToLayoutMode(0));
+            TextView btnJ1 = createStyledButton("J1", "#3B82F6", "#15181F", () -> switchToLayoutMode(1));
+            TextView btnJ2 = createStyledButton("J2", "#3B82F6", "#15181F", () -> switchToLayoutMode(2));
+            TextView btnHide = createStyledButton("✕ Ocultar", "#9CA3AF", "#15181F", this::toggleNativeBars);
+
+            nativeHeaderBar.addView(btnSplit);
+            nativeHeaderBar.addView(btnJ1);
+            nativeHeaderBar.addView(btnJ2);
+            nativeHeaderBar.addView(btnHide);
+
+            mainLayout.addView(nativeHeaderBar);
+
+            // 2. DUAL SPLIT WEBVIEWS
+            LinearLayout splitArea = new LinearLayout(this);
+            splitArea.setOrientation(LinearLayout.VERTICAL);
+            splitArea.setLayoutParams(new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    0,
+                    1.0f
+            ));
+
+            nativeWebView1 = new WebView(this);
+            nativeWebView1.setLayoutParams(new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    0,
+                    1.0f
+            ));
+            configureChildWebSettings(nativeWebView1);
+            nativeWebView1.setWebViewClient(new FourNavChildWebViewClient(this));
+            nativeWebView1.setWebChromeClient(new WebChromeClient());
+
+            dividerView = new View(this);
+            dividerView.setLayoutParams(new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    dpToPx(2)
+            ));
+            dividerView.setBackgroundColor(Color.parseColor("#232832"));
+
+            nativeWebView2 = new WebView(this);
+            nativeWebView2.setLayoutParams(new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    0,
+                    1.0f
+            ));
+            configureChildWebSettings(nativeWebView2);
+            nativeWebView2.setWebViewClient(new FourNavChildWebViewClient(this));
+            nativeWebView2.setWebChromeClient(new WebChromeClient());
+
+            splitArea.addView(nativeWebView1);
+            splitArea.addView(dividerView);
+            splitArea.addView(nativeWebView2);
+
+            mainLayout.addView(splitArea);
+
+            // 3. BOTTOM CONTROL BAR
+            nativeFooterBar = new LinearLayout(this);
+            nativeFooterBar.setOrientation(LinearLayout.HORIZONTAL);
+            nativeFooterBar.setBackgroundColor(Color.parseColor("#0D1017"));
+            nativeFooterBar.setGravity(Gravity.CENTER_VERTICAL);
+            nativeFooterBar.setPadding(padH, padV, padH, padV);
+            nativeFooterBar.setLayoutParams(new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+            ));
+
+            TextView btnReloadJ1 = createStyledButton("🔄 J1", "#9CA3AF", "#15181F", () -> {
+                if (nativeWebView1 != null) nativeWebView1.reload();
+            });
+            TextView btnReloadJ2 = createStyledButton("🔄 J2", "#9CA3AF", "#15181F", () -> {
+                if (nativeWebView2 != null) nativeWebView2.reload();
+            });
+
+            View footerSpacer = new View(this);
+            footerSpacer.setLayoutParams(new LinearLayout.LayoutParams(0, 0, 1.0f));
+
+            TextView statusWake = new TextView(this);
+            statusWake.setText("⚡ 60 FPS • WakeLock");
+            statusWake.setTextColor(Color.parseColor("#EAB308"));
+            statusWake.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
+            statusWake.setPadding(dpToPx(4), dpToPx(2), dpToPx(4), dpToPx(2));
+
+            TextView btnUrl = createStyledButton("🔗 URL", "#3B82F6", "#15181F", this::promptChangeUrl);
+            TextView btnWeb = createStyledButton("🏠 Web", "#9CA3AF", "#15181F", this::toggleNativeDualMode);
+
+            nativeFooterBar.addView(btnReloadJ1);
+            nativeFooterBar.addView(btnReloadJ2);
+            nativeFooterBar.addView(footerSpacer);
+            nativeFooterBar.addView(statusWake);
+            nativeFooterBar.addView(btnUrl);
+            nativeFooterBar.addView(btnWeb);
+
+            mainLayout.addView(nativeFooterBar);
+            nativeDualContainer.addView(mainLayout);
+
+            // 4. FLOATING RESTORE BUTTON (Shown when bars are hidden)
+            floatingRestoreBtn = new TextView(this);
+            floatingRestoreBtn.setText("⚙");
+            floatingRestoreBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+            floatingRestoreBtn.setTextColor(Color.parseColor("#EAB308"));
+            floatingRestoreBtn.setGravity(Gravity.CENTER);
+            GradientDrawable floatBg = new GradientDrawable();
+            floatBg.setColor(Color.parseColor("#CC111317"));
+            floatBg.setStroke(dpToPx(1), Color.parseColor("#3B82F6"));
+            floatBg.setCornerRadius(dpToPx(18));
+            floatingRestoreBtn.setBackground(floatBg);
+            FrameLayout.LayoutParams floatParam = new FrameLayout.LayoutParams(dpToPx(36), dpToPx(36));
+            floatParam.gravity = Gravity.TOP | Gravity.END;
+            floatParam.topMargin = dpToPx(8);
+            floatParam.rightMargin = dpToPx(8);
+            floatingRestoreBtn.setLayoutParams(floatParam);
+            floatingRestoreBtn.setVisibility(View.GONE);
+            floatingRestoreBtn.setOnClickListener(v -> toggleNativeBars());
+            nativeDualContainer.addView(floatingRestoreBtn);
+
+            rootView.addView(nativeDualContainer, new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+            ));
+
+            // Load initial URLs
+            nativeWebView1.loadUrl(urlPane1);
+            nativeWebView2.loadUrl(urlPane2);
+            logMessage("Native Dual WebViews initialized and mounted successfully!");
+        });
+    }
+
+    private void switchToLayoutMode(int mode) {
+        currentLayoutMode = mode;
+        if (nativeWebView1 == null || nativeWebView2 == null || dividerView == null) return;
+
+        if (mode == 0) { // 50:50 Vertical Split
+            nativeWebView1.setVisibility(View.VISIBLE);
+            nativeWebView2.setVisibility(View.VISIBLE);
+            dividerView.setVisibility(View.VISIBLE);
+            LinearLayout.LayoutParams p1 = (LinearLayout.LayoutParams) nativeWebView1.getLayoutParams();
+            p1.weight = 1.0f;
+            nativeWebView1.setLayoutParams(p1);
+            LinearLayout.LayoutParams p2 = (LinearLayout.LayoutParams) nativeWebView2.getLayoutParams();
+            p2.weight = 1.0f;
+            nativeWebView2.setLayoutParams(p2);
+        } else if (mode == 1) { // J1 Maximized
+            nativeWebView1.setVisibility(View.VISIBLE);
+            nativeWebView2.setVisibility(View.GONE);
+            dividerView.setVisibility(View.GONE);
+            LinearLayout.LayoutParams p1 = (LinearLayout.LayoutParams) nativeWebView1.getLayoutParams();
+            p1.weight = 1.0f;
+            nativeWebView1.setLayoutParams(p1);
+        } else if (mode == 2) { // J2 Maximized
+            nativeWebView1.setVisibility(View.GONE);
+            nativeWebView2.setVisibility(View.VISIBLE);
+            dividerView.setVisibility(View.GONE);
+            LinearLayout.LayoutParams p2 = (LinearLayout.LayoutParams) nativeWebView2.getLayoutParams();
+            p2.weight = 1.0f;
+            nativeWebView2.setLayoutParams(p2);
+        }
+    }
+
+    private void toggleNativeBars() {
+        nativeBarsVisible = !nativeBarsVisible;
+        int vis = nativeBarsVisible ? View.VISIBLE : View.GONE;
+        if (nativeHeaderBar != null) nativeHeaderBar.setVisibility(vis);
+        if (nativeFooterBar != null) nativeFooterBar.setVisibility(vis);
+        if (floatingRestoreBtn != null) floatingRestoreBtn.setVisibility(nativeBarsVisible ? View.GONE : View.VISIBLE);
+    }
+
+    private void toggleNativeDualMode() {
+        if (nativeDualContainer == null) return;
+        boolean currentlyVisible = nativeDualContainer.getVisibility() == View.VISIBLE;
+        nativeDualContainer.setVisibility(currentlyVisible ? View.GONE : View.VISIBLE);
+        logMessage("Toggled Native Dual Mode to: " + (currentlyVisible ? "HIDDEN (React Active)" : "VISIBLE"));
+    }
+
+    private void promptChangeUrl() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Navegar para URL");
+
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(dpToPx(16), dpToPx(8), dpToPx(16), dpToPx(8));
+
+        TextView label = new TextView(this);
+        label.setText("Selecione a tela e digite o endereço:");
+        label.setTextColor(Color.parseColor("#9CA3AF"));
+        layout.addView(label);
+
+        EditText input = new EditText(this);
+        input.setText(currentLayoutMode == 2 ? urlPane2 : urlPane1);
+        layout.addView(input);
+
+        builder.setView(layout);
+        builder.setPositiveButton("Carregar no J1", (dialog, which) -> {
+            String newUrl = input.getText().toString().trim();
+            if (!newUrl.isEmpty()) {
+                if (!newUrl.startsWith("http://") && !newUrl.startsWith("https://")) {
+                    newUrl = "https://" + newUrl;
+                }
+                urlPane1 = newUrl;
+                if (nativeWebView1 != null) nativeWebView1.loadUrl(newUrl);
+            }
+        });
+        builder.setNegativeButton("Carregar no J2", (dialog, which) -> {
+            String newUrl = input.getText().toString().trim();
+            if (!newUrl.isEmpty()) {
+                if (!newUrl.startsWith("http://") && !newUrl.startsWith("https://")) {
+                    newUrl = "https://" + newUrl;
+                }
+                urlPane2 = newUrl;
+                if (nativeWebView2 != null) nativeWebView2.loadUrl(newUrl);
+            }
+        });
+        builder.setNeutralButton("Cancelar", null);
+        builder.show();
+    }
+
+    private static class FourNavChildWebViewClient extends WebViewClient {
+        private final java.lang.ref.WeakReference<MainActivity> activityRef;
+
+        public FourNavChildWebViewClient(MainActivity activity) {
+            this.activityRef = new java.lang.ref.WeakReference<>(activity);
+        }
+
+        @Override
+        public void onPageFinished(WebView view, String url) {
+            super.onPageFinished(view, url);
+            MainActivity act = activityRef.get();
+            if (act != null) {
+                act.injectGhostPopupCleaner(view);
+            }
+        }
+
+        @Override
+        public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+            if (request != null && request.getUrl() != null) {
+                WebResourceResponse resp = processIntercept(request.getUrl().toString(), request.getMethod(), request.getRequestHeaders());
+                if (resp != null) return resp;
+            }
+            return super.shouldInterceptRequest(view, request);
+        }
+
+        @Override
+        public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+            return false;
+        }
     }
 
     private void configureChildWebSettings(WebView childWebView) {
@@ -450,6 +795,20 @@ public class MainActivity extends BridgeActivity {
                 wv.postInvalidate();
             } catch (Exception ignored) {}
         }
+        if (nativeWebView1 != null) {
+            try {
+                nativeWebView1.resumeTimers();
+                nativeWebView1.onResume();
+                nativeWebView1.postInvalidate();
+            } catch (Exception ignored) {}
+        }
+        if (nativeWebView2 != null) {
+            try {
+                nativeWebView2.resumeTimers();
+                nativeWebView2.onResume();
+                nativeWebView2.postInvalidate();
+            } catch (Exception ignored) {}
+        }
         applyCustomWebViewClient();
     }
 
@@ -463,6 +822,27 @@ public class MainActivity extends BridgeActivity {
                 // Keep JS timers and game animation execution active in background across all windows
                 wv.resumeTimers();
             } catch (Exception ignored) {}
+        }
+        if (nativeWebView1 != null) {
+            try {
+                nativeWebView1.resumeTimers();
+            } catch (Exception ignored) {}
+        }
+        if (nativeWebView2 != null) {
+            try {
+                nativeWebView2.resumeTimers();
+            } catch (Exception ignored) {}
+        }
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        if (nativeWebView1 != null) {
+            try { nativeWebView1.destroy(); } catch (Exception ignored) {}
+        }
+        if (nativeWebView2 != null) {
+            try { nativeWebView2.destroy(); } catch (Exception ignored) {}
         }
     }
 
@@ -593,18 +973,6 @@ public class MainActivity extends BridgeActivity {
             }
         }
 
-        // Automatic redirect for RagIdle root/api.html to quadro.html (the clean game engine)
-        if (host != null && host.equalsIgnoreCase("play.roclassicidle.com.br")) {
-            String path = uri.getPath();
-            if (path == null || path.isEmpty() || path.equals("/") || path.equalsIgnoreCase("/api.html")) {
-                Map<String, String> redirHeaders = new HashMap<>();
-                redirHeaders.put("Location", "https://play.roclassicidle.com.br/quadro.html");
-                redirHeaders.put("Access-Control-Allow-Origin", "*");
-                logMessage("Redirecting RagIdle root to quadro.html");
-                return new WebResourceResponse("text/plain", "utf-8", 302, "Found", redirHeaders, new ByteArrayInputStream(new byte[0]));
-            }
-        }
-
         // Let Chromium handle static binary/resource assets directly for optimal performance
         if (isStaticAsset(uri)) {
             return null;
@@ -707,28 +1075,26 @@ public class MainActivity extends BridgeActivity {
                 if (mimeType.toLowerCase(Locale.ROOT).contains("html")) {
                     String html = body.string();
 
-                    String shimToInject = urlStr.toLowerCase(Locale.ROOT).contains("roclassicidle") ? RAGIDLE_SHIM_SCRIPT : STANDALONE_SHIM_SCRIPT;
-
                     // Inject standalone Chrome top-level window emulation at the top of <head>
                     int headIndex = html.toLowerCase(Locale.ROOT).indexOf("<head");
                     if (headIndex != -1) {
                         int closeHead = html.indexOf(">", headIndex);
                         if (closeHead != -1) {
-                            html = html.substring(0, closeHead + 1) + shimToInject + html.substring(closeHead + 1);
+                            html = html.substring(0, closeHead + 1) + STANDALONE_SHIM_SCRIPT + html.substring(closeHead + 1);
                         } else {
-                            html = shimToInject + html;
+                            html = STANDALONE_SHIM_SCRIPT + html;
                         }
                     } else {
                         int htmlIndex = html.toLowerCase(Locale.ROOT).indexOf("<html");
                         if (htmlIndex != -1) {
                             int tagClose = html.indexOf(">", htmlIndex);
                             if (tagClose != -1) {
-                                html = html.substring(0, tagClose + 1) + shimToInject + html.substring(tagClose + 1);
+                                html = html.substring(0, tagClose + 1) + STANDALONE_SHIM_SCRIPT + html.substring(tagClose + 1);
                             } else {
-                                html = shimToInject + html;
+                                html = STANDALONE_SHIM_SCRIPT + html;
                             }
                         } else {
-                            html = shimToInject + html;
+                            html = STANDALONE_SHIM_SCRIPT + html;
                         }
                     }
 

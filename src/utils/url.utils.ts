@@ -46,11 +46,6 @@ export function normalizeAddressInput(rawInput: string): string {
     }
   }
 
-  // RO Classic Idle: ensure quadro.html (standalone clean game engine)
-  if (/^https?:\/\/play\.roclassicidle\.com\.br\/?$/i.test(result)) {
-    result = 'https://play.roclassicidle.com.br/quadro.html';
-  }
-
   return result;
 }
 
@@ -98,7 +93,7 @@ export function isKnownFrameRestrictedDomain(url: string): boolean {
 export const QUICK_BOOKMARKS: QuickBookmark[] = [
   {
     title: 'RO Classic Idle',
-    url: 'https://play.roclassicidle.com.br/quadro.html',
+    url: 'https://play.roclassicidle.com.br/',
     category: 'Game • Multi-Conta',
     badgeColor: '#EAB308',
   },
@@ -155,10 +150,10 @@ export const GRID_PRESETS: GridPreset[] = [
     name: '4x RO Classic Idle (4 Contas na Mesma Aba)',
     description: 'Abre play.roclassicidle.com.br nos 4 quadrantes simultaneamente',
     urls: {
-      q1: 'https://play.roclassicidle.com.br/quadro.html',
-      q2: 'https://play.roclassicidle.com.br/quadro.html',
-      q3: 'https://play.roclassicidle.com.br/quadro.html',
-      q4: 'https://play.roclassicidle.com.br/quadro.html',
+      q1: 'https://play.roclassicidle.com.br/',
+      q2: 'https://play.roclassicidle.com.br/',
+      q3: 'https://play.roclassicidle.com.br/',
+      q4: 'https://play.roclassicidle.com.br/',
     },
   },
   {
@@ -166,7 +161,7 @@ export const GRID_PRESETS: GridPreset[] = [
     name: 'Setup Principal (RO Idle + Google + YouTube + Livre)',
     description: 'Q1: RO Classic Idle • Q2: Google • Q3: YouTube • Q4: Speed Dial',
     urls: {
-      q1: 'https://play.roclassicidle.com.br/quadro.html',
+      q1: 'https://play.roclassicidle.com.br/',
       q2: 'https://www.google.com',
       q3: 'https://www.youtube.com',
       q4: 'about:blank',
