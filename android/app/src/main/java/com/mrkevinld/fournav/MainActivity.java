@@ -96,7 +96,6 @@ public class MainActivity extends BridgeActivity {
         getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         initOkHttp();
-        installServiceWorkerInterceptor();
 
         Bridge bridge = this.getBridge();
         if (bridge != null) {
@@ -117,6 +116,7 @@ public class MainActivity extends BridgeActivity {
             settings.setJavaScriptCanOpenWindowsAutomatically(true);
             settings.setMediaPlaybackRequiresUserGesture(false);
             settings.setSafeBrowsingEnabled(false);
+            settings.setGeolocationEnabled(true);
             settings.setTextZoom(100);
 
             // Chrome standard viewport, hardware acceleration and caching behavior
@@ -173,7 +173,6 @@ public class MainActivity extends BridgeActivity {
             } catch (Exception ignored) {}
         }
         applyCustomWebViewClient();
-        installServiceWorkerInterceptor();
     }
 
     @Override
@@ -197,7 +196,11 @@ public class MainActivity extends BridgeActivity {
                 CookieManager cm = CookieManager.getInstance();
                 String urlStr = url.toString();
                 for (Cookie c : cookies) {
-                    cm.setCookie(urlStr, c.toString());
+                    String cookieStr = c.toString();
+                    if (!cookieStr.toLowerCase(Locale.ROOT).contains("samesite=")) {
+                        cookieStr += "; SameSite=None; Secure";
+                    }
+                    cm.setCookie(urlStr, cookieStr);
                 }
                 cm.flush();
             }
@@ -236,31 +239,6 @@ public class MainActivity extends BridgeActivity {
                 .connectTimeout(15, TimeUnit.SECONDS)
                 .readTimeout(20, TimeUnit.SECONDS)
                 .build();
-    }
-
-    private void installServiceWorkerInterceptor() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            try {
-                ServiceWorkerController swController = ServiceWorkerController.getInstance();
-                swController.setServiceWorkerClient(new ServiceWorkerClient() {
-                    @Override
-                    public WebResourceResponse shouldInterceptRequest(WebResourceRequest request) {
-                        if (request != null && request.getUrl() != null) {
-                            WebResourceResponse resp = processIntercept(request.getUrl().toString(), request.getMethod(), request.getRequestHeaders());
-                            if (resp != null) return resp;
-                        }
-                        Bridge bridge = getBridge();
-                        if (bridge != null && bridge.getLocalServer() != null) {
-                            return bridge.getLocalServer().shouldInterceptRequest(request);
-                        }
-                        return null;
-                    }
-                });
-                logMessage("ServiceWorkerController interception active");
-            } catch (Exception e) {
-                logMessage("ServiceWorkerController set error: " + e.getMessage());
-            }
-        }
     }
 
     private void applyCustomWebViewClient() {
@@ -346,8 +324,34 @@ public class MainActivity extends BridgeActivity {
             return null;
         }
 
+        // If incoming request headers are available, verify whether this request is an HTML document / iframe navigation
+        if (incomingHeaders != null && !incomingHeaders.isEmpty()) {
+            String fetchDest = incomingHeaders.get("Sec-Fetch-Dest");
+            if (fetchDest == null) fetchDest = incomingHeaders.get("sec-fetch-dest");
+            // If destination is specified and NOT a document or iframe (e.g. empty, script, style, image, font), let Chromium handle it directly!
+            if (fetchDest != null && !fetchDest.equalsIgnoreCase("document") && !fetchDest.equalsIgnoreCase("iframe")) {
+                return null;
+            }
+
+            String accept = incomingHeaders.get("Accept");
+            if (accept == null) accept = incomingHeaders.get("accept");
+            // If Accept does not ask for HTML and destination is not an iframe, let Chromium handle it directly!
+            if (accept != null && !accept.toLowerCase(Locale.ROOT).contains("text/html") && (fetchDest == null || !fetchDest.equalsIgnoreCase("iframe"))) {
+                return null;
+            }
+        } else {
+            // No headers provided (legacy callback): only intercept root or .html pages
+            String path = uri.getPath();
+            if (path != null && path.contains(".")) {
+                String lower = path.toLowerCase(Locale.ROOT);
+                if (!lower.endsWith(".html") && !lower.endsWith(".htm") && !lower.endsWith(".php") && !lower.endsWith(".asp") && !lower.endsWith(".aspx")) {
+                    return null;
+                }
+            }
+        }
+
         try {
-            logMessage("OkHttp Intercepting: " + urlStr);
+            logMessage("OkHttp Unblocking HTML Frame: " + urlStr);
 
             Request.Builder reqBuilder = new Request.Builder()
                     .url(urlStr)
@@ -357,7 +361,7 @@ public class MainActivity extends BridgeActivity {
             if (incomingHeaders != null && !incomingHeaders.isEmpty()) {
                 for (Map.Entry<String, String> entry : incomingHeaders.entrySet()) {
                     String name = entry.getKey();
-                    if (!name.equalsIgnoreCase("Host") && !name.equalsIgnoreCase("Content-Length") && !name.equalsIgnoreCase("Accept-Encoding")) {
+                    if (!name.equalsIgnoreCase("Host") && !name.equalsIgnoreCase("Content-Length") && !name.equalsIgnoreCase("Accept-Encoding") && !name.equalsIgnoreCase("Cookie")) {
                         reqBuilder.header(name, entry.getValue());
                     }
                 }
@@ -366,12 +370,6 @@ public class MainActivity extends BridgeActivity {
                 reqBuilder.header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8");
                 reqBuilder.header("Accept-Language", "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7");
                 reqBuilder.header("Upgrade-Insecure-Requests", "1");
-            }
-
-            // Sync current cookies from CookieManager
-            String cmCookies = CookieManager.getInstance().getCookie(urlStr);
-            if (cmCookies != null && !cmCookies.isEmpty()) {
-                reqBuilder.header("Cookie", cmCookies);
             }
 
             Response response = okHttpClient.newCall(reqBuilder.build()).execute();
