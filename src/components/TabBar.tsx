@@ -9,6 +9,7 @@ import {
   ArrowsInLineHorizontal,
   Gear,
   CaretUp,
+  LockKey,
 } from '@phosphor-icons/react';
 import type { BrowserTab } from '../types/browser.types';
 import { getDisplayHost, GRID_PRESETS } from '../utils/url.utils';
@@ -33,6 +34,7 @@ interface TabBarProps {
   onSetSplit?: (splitX: number, splitY: number) => void;
   onApplyPreset: (urls: Record<string, string>) => void;
   onOpenSettings: () => void;
+  onOpenVault?: () => void;
 }
 
 export const TabBar: React.FC<TabBarProps> = ({
@@ -54,6 +56,7 @@ export const TabBar: React.FC<TabBarProps> = ({
   onSetSplit,
   onApplyPreset,
   onOpenSettings,
+  onOpenVault,
 }) => {
   const { isMobile, isPortrait } = useMobileView();
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
@@ -418,6 +421,21 @@ export const TabBar: React.FC<TabBarProps> = ({
             </>
           )}
         </div>
+
+        {/* Credentials Vault Button */}
+        {onOpenVault && (
+          <button
+            type="button"
+            onClick={onOpenVault}
+            title="Cofre de Senhas & Contas (Protegido por PIN Mestre PBKDF2 e Auto-Lock de 5 min)"
+            className={`flex items-center gap-1 ${
+              isMobile ? 'w-[24px] h-[24px] justify-center px-0' : 'px-2.5 h-[26px]'
+            } bg-[#111317] hover:bg-[#181B21] text-[#F3F4F6] border border-[#232832] hover:border-[#3B82F6]/50 rounded-[2px] text-[11px] font-medium transition-colors cursor-pointer`}
+          >
+            <LockKey size={13} className="text-[#3B82F6]" weight="bold" />
+            <span className="hidden sm:inline">Cofre</span>
+          </button>
+        )}
 
         {/* Settings Button */}
         <button

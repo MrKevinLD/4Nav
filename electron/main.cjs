@@ -8,30 +8,184 @@ app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
 app.commandLine.appendSwitch('enable-gpu-rasterization');
 
 const configuredPartitions = new Set();
+let mainWindowInstance = null;
 
 const CHROME_USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36';
 
 /**
- * Configures an isolated Chromium session partition for a specific browser tab or quadrant.
- * - Each partition ("persist:session-...") has its own Cookie Jar, LocalStorage, IndexedDB, Cache, and WebGL context.
- * - Strips restrictive X-Frame-Options / frame-ancestors headers and spoofs standard Chrome User-Agent.
+ * 1. ⚙️ Hardware Protection & Anti-Cryptojacking Filter
+ * Known cryptomining script domains, pools, and signatures to block in webRequest.onBeforeRequest.
  */
-function ensurePartitionConfigured(partitionName) {
-  if (!partitionName || configuredPartitions.has(partitionName)) return;
-  configuredPartitions.add(partitionName);
+const CRYPTOJACKING_PATTERNS = [
+  'coinhive.com',
+  'coinhive.min.js',
+  'crypto-loot.com',
+  'cryptoloot.pro',
+  'webminepool.com',
+  'coinimp.com',
+  'minr.pw',
+  'coin-have.com',
+  'authedmine.com',
+  'jsecoin.com',
+  'deepminer.org',
+  'coinlab.biz',
+  'papoto.com',
+  'cloudcoins.co',
+  '2giga.link',
+  'monerominer',
+  'webassemblyminer',
+  'miner.js',
+  'cryptonight',
+  'moneroengine',
+  'xmr-miner',
+  'browserminer',
+  'webminerpool',
+  'crypto-webminer',
+  'moneromining',
+  'harvest.js',
+  'hashing.win',
+];
 
-  const partSession = session.fromPartition(partitionName, { cache: true });
-  partSession.setUserAgent(CHROME_USER_AGENT);
+/**
+ * 3. 🛡️ Rigorous Sandboxing for Devices & Invasive Sensors
+ */
+const INVASIVE_PERMISSIONS = new Set([
+  'media',
+  'camera',
+  'microphone',
+  'geolocation',
+  'notifications',
+  'sensors',
+  'midi',
+  'midisysex',
+  'usb',
+  'bluetooth',
+  'serial',
+  'hid',
+  'display-capture',
+  'idle-detection',
+  'screen-wake-lock',
+  'window-management',
+  'local-fonts',
+]);
 
-  // Clean Electron from User-Agent header on every request so Google/Facebook/Cloudflare treat it as standard Chrome
-  partSession.webRequest.onBeforeSendHeaders((details, callback) => {
+/**
+ * 5. 🚫 Dangerous Executables & Scripts Blocklist for Download Guard
+ */
+const DANGEROUS_EXTENSIONS = new Set([
+  '.exe',
+  '.bat',
+  '.cmd',
+  '.msi',
+  '.vbs',
+  '.ps1',
+  '.scr',
+  '.jar',
+  '.com',
+  '.pif',
+  '.reg',
+  '.cpl',
+  '.gadget',
+  '.hta',
+  '.inf',
+  '.ins',
+  '.inx',
+  '.isu',
+  '.job',
+  '.jse',
+  '.lnk',
+  '.msc',
+  '.msp',
+  '.mst',
+  '.paf',
+  '.rgs',
+  '.sct',
+  '.shb',
+  '.shs',
+  '.u3p',
+  '.vb',
+  '.vbe',
+  '.ws',
+  '.wsf',
+  '.wsh',
+]);
+
+/**
+ * Attaches Download Guard against dangerous executables to a session.
+ */
+function attachDownloadGuard(targetSession) {
+  targetSession.on('will-download', (event, item) => {
+    const filename = item.getFilename() || '';
+    const ext = path.extname(filename).toLowerCase();
+
+    if (DANGEROUS_EXTENSIONS.has(ext)) {
+      event.preventDefault();
+      item.cancel();
+      console.warn(`[4Nav Download Guard] Bloqueado executável de alto risco: ${filename}`);
+
+      if (mainWindowInstance && !mainWindowInstance.isDestroyed()) {
+        mainWindowInstance.webContents.send('security:blocked-download', {
+          filename,
+          ext,
+          timestamp: Date.now(),
+        });
+      }
+    }
+  });
+}
+
+/**
+ * Attaches Sandboxing and Permission Denials to a session.
+ */
+function attachPermissionSandbox(targetSession) {
+  targetSession.setPermissionRequestHandler((_webContents, permission, callback) => {
+    const permLower = String(permission || '').toLowerCase();
+    if (INVASIVE_PERMISSIONS.has(permLower)) {
+      console.warn(`[4Nav Sandboxing] Permissão invasiva negada preventivamente: ${permission}`);
+      return callback(false);
+    }
+    callback(false); // Default-deny security baseline
+  });
+
+  targetSession.setPermissionCheckHandler((_webContents, permission) => {
+    const permLower = String(permission || '').toLowerCase();
+    if (INVASIVE_PERMISSIONS.has(permLower)) {
+      return false;
+    }
+    return false; // Default-deny
+  });
+
+  if (typeof targetSession.setDevicePermissionHandler === 'function') {
+    targetSession.setDevicePermissionHandler(() => false);
+  }
+}
+
+/**
+ * Attaches Anti-Cryptojacking and Network Filters to a session.
+ */
+function attachNetworkSecurity(targetSession) {
+  // 1. Anti-Cryptojacking Interceptor
+  targetSession.webRequest.onBeforeRequest((details, callback) => {
+    const urlLower = (details.url || '').toLowerCase();
+    for (const pattern of CRYPTOJACKING_PATTERNS) {
+      if (urlLower.includes(pattern)) {
+        console.warn(`[4Nav Anti-Cryptojacking] Conexão maliciosa de mineração bloqueada: ${details.url}`);
+        return callback({ cancel: true });
+      }
+    }
+    callback({ cancel: false });
+  });
+
+  // 2. User-Agent Chrome Spoofing
+  targetSession.webRequest.onBeforeSendHeaders((details, callback) => {
     const requestHeaders = { ...(details.requestHeaders || {}) };
     requestHeaders['User-Agent'] = CHROME_USER_AGENT;
     callback({ cancel: false, requestHeaders });
   });
 
-  partSession.webRequest.onHeadersReceived((details, callback) => {
+  // 3. Header Sanitization (Bypass frame-ancestors / X-Frame-Options)
+  targetSession.webRequest.onHeadersReceived((details, callback) => {
     const responseHeaders = { ...(details.responseHeaders || {}) };
 
     for (const headerKey of Object.keys(responseHeaders)) {
@@ -53,6 +207,21 @@ function ensurePartitionConfigured(partitionName) {
   });
 }
 
+/**
+ * Configures an isolated Chromium session partition with full 5-tier security suite.
+ */
+function ensurePartitionConfigured(partitionName) {
+  if (!partitionName || configuredPartitions.has(partitionName)) return;
+  configuredPartitions.add(partitionName);
+
+  const partSession = session.fromPartition(partitionName, { cache: true });
+  partSession.setUserAgent(CHROME_USER_AGENT);
+
+  attachNetworkSecurity(partSession);
+  attachPermissionSandbox(partSession);
+  attachDownloadGuard(partSession);
+}
+
 function createMainWindow() {
   const mainWindow = new BrowserWindow({
     width: 1540,
@@ -72,6 +241,20 @@ function createMainWindow() {
     },
   });
 
+  mainWindowInstance = mainWindow;
+
+  // Configure default session security
+  const defaultSess = session.defaultSession;
+  defaultSess.setUserAgent(CHROME_USER_AGENT);
+  attachNetworkSecurity(defaultSess);
+  attachPermissionSandbox(defaultSess);
+  attachDownloadGuard(defaultSess);
+
+  // Pre-configure all 4 persistent slot partitions
+  ['persist:slot1', 'persist:slot2', 'persist:slot3', 'persist:slot4'].forEach((slot) => {
+    ensurePartitionConfigured(slot);
+  });
+
   // Automatically configure any <webview> partition before it attaches
   mainWindow.webContents.on('will-attach-webview', (_event, webPreferences, params) => {
     webPreferences.nodeIntegration = false;
@@ -82,18 +265,20 @@ function createMainWindow() {
     }
   });
 
-  // Allow OAuth login popups (e.g. "Login with Google / Facebook" inside games or sites)
-  // while keeping the popup inside the exact same isolated session partition!
+  // 4. 🔒 Navigation Guard: Intercepts & Contains Window Openings (Popups)
   app.on('web-contents-created', (_event, contents) => {
     if (contents.getType() === 'webview') {
       contents.setUserAgent(CHROME_USER_AGENT);
       contents.setWindowOpenHandler(({ url }) => {
+        // Only allow valid HTTP/HTTPS schemes and contain inside modal popup with identical session
         if (url.startsWith('http://') || url.startsWith('https://')) {
           return {
             action: 'allow',
             overrideBrowserWindowOptions: {
-              width: 540,
-              height: 700,
+              width: 580,
+              height: 720,
+              parent: mainWindow,
+              modal: false,
               autoHideMenuBar: true,
               backgroundColor: '#090A0C',
               webPreferences: {
@@ -104,6 +289,7 @@ function createMainWindow() {
             },
           };
         }
+        console.warn(`[4Nav Navigation Guard] Bloqueada tentativa de popup não autorizada: ${url}`);
         return { action: 'deny' };
       });
     }

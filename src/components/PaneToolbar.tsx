@@ -5,11 +5,11 @@ import {
   ArrowRight,
   ArrowClockwise,
   House,
-  LockKey,
   Globe,
   CornersOut,
   CornersIn,
   ShieldCheck,
+  ShieldWarning,
   PlugsConnected,
   ArrowSquareOut,
   SpeakerHigh,
@@ -68,6 +68,7 @@ export const PaneToolbar: React.FC<PaneToolbarProps> = ({
 }) => {
   const { isMobile } = useMobileView();
   const [draftUrl, setDraftUrl] = useState(pane.inputUrl);
+  const [showHttpWarning, setShowHttpWarning] = useState(false);
 
   useEffect(() => {
     setDraftUrl(pane.inputUrl);
@@ -80,7 +81,8 @@ export const PaneToolbar: React.FC<PaneToolbarProps> = ({
   };
 
   const isHttps = pane.url.startsWith('https://');
-  const isBlank = !pane.url || pane.url === 'about:blank';
+  const isHttp = pane.url.startsWith('http://') && !pane.url.startsWith('http://localhost') && !pane.url.startsWith('http://127.0.0.1');
+  const isBlank = !pane.url || pane.url === 'about:blank' || pane.url.startsWith('localhost') || pane.url.startsWith('http://localhost') || pane.url.startsWith('http://127.0.0.1');
   const isElectron = Boolean(typeof window !== 'undefined' && window.electronAPI?.isElectron);
 
   return (
@@ -203,12 +205,46 @@ export const PaneToolbar: React.FC<PaneToolbarProps> = ({
               : 'border-[#232832]/70 focus-within:border-[#3B82F6]'
           }`}
         >
+          {/* Dynamic Protocol & Navigation Shield */}
           {isBlank ? (
-            <Globe size={isMobile ? 10 : 12} className="text-[#6B7280] shrink-0" />
+            <span title="🌐 Página em branco ou endereço local" className="flex items-center shrink-0">
+              <Globe
+                size={isMobile ? 10 : 12}
+                className="text-[#9CA3AF]"
+              />
+            </span>
           ) : isHttps ? (
-            <LockKey size={isMobile ? 10 : 12} weight="fill" className="text-[#3B82F6] shrink-0" />
+            <span title="🔒 Verde Esmeralda: Conexão segura e criptografada via SSL/TLS (HTTPS)" className="flex items-center shrink-0">
+              <ShieldCheck
+                size={isMobile ? 11 : 13}
+                weight="fill"
+                className="text-emerald-400"
+              />
+            </span>
+          ) : isHttp ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setShowHttpWarning(true);
+              }}
+              title="⚠️ Vermelho Pulsante: Conexão aberta e sem criptografia (HTTP). Clique para ver o alerta!"
+              className="shrink-0 p-0 m-0 border-none bg-transparent cursor-pointer flex items-center"
+            >
+              <ShieldWarning
+                size={isMobile ? 11 : 13}
+                weight="fill"
+                className="text-[#EF4444] animate-pulse"
+              />
+            </button>
           ) : (
-            <Globe size={isMobile ? 10 : 12} className="text-[#EAB308] shrink-0" />
+            <span title="🌐 Conexão de protocolo genérico" className="flex items-center shrink-0">
+              <Globe
+                size={isMobile ? 10 : 12}
+                className="text-[#9CA3AF]"
+              />
+            </span>
           )}
 
           <input
@@ -236,6 +272,44 @@ export const PaneToolbar: React.FC<PaneToolbarProps> = ({
           )}
         </div>
       </form>
+
+      {/* HTTP Insecure Connection Warning Popover */}
+      {showHttpWarning && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/60 backdrop-blur-2xs"
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowHttpWarning(false);
+          }}
+        >
+          <div
+            className="w-full max-w-sm bg-[#161214] border border-[#EF4444]/50 rounded-[4px] p-4 shadow-2xl flex flex-col gap-3 animate-in fade-in zoom-in-95"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-2 text-[#EF4444]">
+              <ShieldWarning size={22} weight="bold" />
+              <h4 className="font-bold text-sm text-[#F3F4F6]">
+                Conexão Não Criptografada (HTTP)
+              </h4>
+            </div>
+            <p className="text-xs text-[#D1D5DB] leading-relaxed">
+              Esta página web está utilizando o protocolo <strong className="text-[#EF4444]">HTTP aberto</strong>, sem criptografia SSL/TLS.
+            </p>
+            <div className="p-2.5 bg-[#2B1518] border border-[#521C24] rounded-[3px] text-[11px] text-[#FCA5A5] leading-normal">
+              ⚠️ <strong>Aviso de Segurança:</strong> Não insira senhas, logins, chaves de acesso ou dados pessoais nesta página. Informações transmitidas em HTTP podem ser interceptadas.
+            </div>
+            <div className="flex justify-end pt-1">
+              <button
+                type="button"
+                onClick={() => setShowHttpWarning(false)}
+                className="px-3 py-1.5 bg-[#232832] hover:bg-[#323846] text-[#F3F4F6] text-xs font-medium rounded-[3px] transition-colors cursor-pointer"
+              >
+                Entendido
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Right Quadrant Utility Controls */}
       <div className="flex items-center gap-0.5 shrink-0">

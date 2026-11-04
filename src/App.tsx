@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { CaretDown } from '@phosphor-icons/react';
+import { CaretDown, ShieldWarning, X } from '@phosphor-icons/react';
 import { useBrowserState } from './hooks/useBrowserState';
 import { useSettings } from './hooks/useSettings';
 import { useMobileView } from './hooks/useMobileView';
@@ -8,6 +8,7 @@ import { TabBar } from './components/TabBar';
 import { QuadGrid } from './components/QuadGrid';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { SettingsModal } from './components/SettingsModal';
+import { CredentialsVaultModal } from './components/CredentialsVaultModal';
 
 export const App: React.FC = () => {
   const {
@@ -44,8 +45,26 @@ export const App: React.FC = () => {
   const { isMobile, isPortrait } = useMobileView();
   const [isDualSplit, setIsDualSplit] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isVaultOpen, setIsVaultOpen] = useState(false);
+  const [blockedDownloadToast, setBlockedDownloadToast] = useState<{
+    filename: string;
+    ext: string;
+  } | null>(null);
   const [isImmersiveMode, setIsImmersiveMode] = useState(false);
   const edgeTouchStartY = useRef<number | null>(null);
+
+  // 5. 🚫 Download Guard listener from Electron
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.electronAPI?.onBlockedDownload) {
+      const unsub = window.electronAPI.onBlockedDownload((data) => {
+        setBlockedDownloadToast(data);
+        setTimeout(() => {
+          setBlockedDownloadToast((prev) => (prev?.filename === data.filename ? null : prev));
+        }, 6000);
+      });
+      return unsub;
+    }
+  }, []);
 
   const handleEdgeTouchStart = (e: React.TouchEvent) => {
     edgeTouchStartY.current = e.touches[0].clientY;
@@ -273,6 +292,7 @@ export const App: React.FC = () => {
         }}
         onApplyPreset={(urls) => applyPresetToTab(currentTab.id, urls)}
         onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenVault={() => setIsVaultOpen(true)}
       />
 
       {/* Main Grid Viewport for Active Tab */}
@@ -369,6 +389,38 @@ export const App: React.FC = () => {
         onResetSettings={resetSettings}
         onClearRamCache={handleClearRamCache}
       />
+
+      {/* 🔐 Credentials Vault Modal (PIN Mestre PBKDF2 & Auto-Lock) */}
+      <CredentialsVaultModal
+        isOpen={isVaultOpen}
+        onClose={() => setIsVaultOpen(false)}
+        onFillCredentialToPane={(slotNum, username) => {
+          // Quick feedback notification when copied/filled
+          alert(`Credencial para J${slotNum} (${username}) pronta para uso!`);
+        }}
+      />
+
+      {/* 🚫 5. Download Guard Security Toast Alert */}
+      {blockedDownloadToast && (
+        <div className="fixed top-12 right-4 z-50 flex items-center gap-2.5 p-3.5 bg-[#251012] border border-[#EF4444] rounded-[4px] shadow-2xl text-xs text-[#F3F4F6] max-w-md animate-in fade-in slide-in-from-top-3">
+          <ShieldWarning size={22} className="text-[#EF4444] shrink-0" weight="bold" />
+          <div className="flex-1 min-w-0">
+            <p className="font-bold text-[#F87171] text-xs">
+              🛡️ Download Bloqueado por Segurança
+            </p>
+            <p className="text-[11px] text-[#D1D5DB] mt-0.5 truncate">
+              "{blockedDownloadToast.filename}" é um executável de alto risco proibido por segurança.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setBlockedDownloadToast(null)}
+            className="w-5 h-5 flex items-center justify-center text-[#9CA3AF] hover:text-[#F3F4F6] cursor-pointer"
+          >
+            <X size={14} weight="bold" />
+          </button>
+        </div>
+      )}
     </div>
   );
 };

@@ -81,6 +81,7 @@ export interface ElectronBridgeAPI {
   prepareSession: (partitionName: string) => Promise<{ ok: boolean; partitionName: string }>;
   clearSession: (partitionName: string) => Promise<{ ok: boolean; partitionName: string }>;
   openExternal: (targetUrl: string) => Promise<{ ok: boolean }>;
+  onBlockedDownload?: (callback: (data: { filename: string; ext: string; timestamp: number }) => void) => () => void;
 }
 
 declare global {
