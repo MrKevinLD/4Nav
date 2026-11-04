@@ -48,10 +48,26 @@ public class MainActivity extends BridgeActivity {
             "<script>" +
             "(function() {" +
             "  try {" +
-            "    Object.defineProperty(window, 'top', { get: function() { return window; }, configurable: false, enumerable: true });" +
-            "    Object.defineProperty(window, 'parent', { get: function() { return window; }, configurable: false, enumerable: true });" +
-            "    Object.defineProperty(window, 'frameElement', { get: function() { return null; }, configurable: false, enumerable: true });" +
-            "  } catch(e) {}" +
+            "    var rootSameOrigin = window;" +
+            "    try {" +
+            "      var curr = window;" +
+            "      while (curr.parent && curr.parent !== curr) {" +
+            "        if (curr.parent.location.origin === window.location.origin) {" +
+            "          curr = curr.parent;" +
+            "          rootSameOrigin = curr;" +
+            "        } else {" +
+            "          break;" +
+            "        }" +
+            "      }" +
+            "    } catch (e) {}" +
+            "    if (rootSameOrigin === window) {" +
+            "      Object.defineProperty(window, 'top', { get: function() { return window; }, configurable: false, enumerable: true });" +
+            "      Object.defineProperty(window, 'parent', { get: function() { return window; }, configurable: false, enumerable: true });" +
+            "      Object.defineProperty(window, 'frameElement', { get: function() { return null; }, configurable: false, enumerable: true });" +
+            "    } else {" +
+            "      Object.defineProperty(window, 'top', { get: function() { return rootSameOrigin; }, configurable: false, enumerable: true });" +
+            "    }" +
+            "  } catch(err) {}" +
             "})();" +
             "</script>";
 
@@ -59,11 +75,6 @@ public class MainActivity extends BridgeActivity {
             "(function() {" +
             "  if (window.__4navGhostCleaner) return;" +
             "  window.__4navGhostCleaner = true;" +
-            "  try {" +
-            "    Object.defineProperty(window, 'top', { get: function() { return window; }, configurable: false, enumerable: true });" +
-            "    Object.defineProperty(window, 'parent', { get: function() { return window; }, configurable: false, enumerable: true });" +
-            "    Object.defineProperty(window, 'frameElement', { get: function() { return null; }, configurable: false, enumerable: true });" +
-            "  } catch(e) {}" +
             "  function isCloseLike(el) {" +
             "    if (!el) return false;" +
             "    var text = (el.innerText || el.textContent || '').trim().toLowerCase();" +
