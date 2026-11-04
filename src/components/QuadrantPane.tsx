@@ -420,7 +420,7 @@ export const QuadrantPane: React.FC<QuadrantPaneProps> = ({
                 ? undefined
                 : 'allow-same-origin allow-scripts allow-forms allow-popups allow-modals allow-presentation'
             }
-            referrerPolicy="no-referrer"
+            allow="autoplay; fullscreen; clipboard-read; clipboard-write; wake-lock"
             className="w-full h-full border-0 bg-[#090A0C]"
           />
         )}

@@ -25,6 +25,7 @@ interface MobileBottomNavProps {
   keepScreenAwake: boolean;
   enableEcoBatteryMode: boolean;
   onSelectPane: (paneId: string) => void;
+  onClosePane?: (paneId: string) => void;
   onAddPane: () => void;
   onToggleDualSplit: () => void;
   onToggleWakeLock: () => void;
@@ -41,6 +42,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   keepScreenAwake,
   enableEcoBatteryMode,
   onSelectPane,
+  onClosePane,
   onAddPane,
   onToggleDualSplit,
   onToggleWakeLock,
@@ -103,19 +105,34 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
             const isActive = activePaneId === paneId;
             const num = index + 1;
             return (
-              <button
-                key={paneId}
-                type="button"
-                onClick={() => onSelectPane(paneId)}
-                aria-label={`Conta ${num}`}
-                className={`min-w-[44px] h-[42px] px-2.5 flex items-center justify-center gap-1 rounded-[3px] text-xs font-mono font-bold transition-all cursor-pointer ${
-                  isActive
-                    ? 'bg-[#3B82F6] text-[#090A0C] shadow-lg shadow-[#3B82F6]/25 ring-1 ring-[#3B82F6]'
-                    : 'bg-[#111317] text-[#9CA3AF] border border-[#232832] active:bg-[#181B21]'
-                }`}
-              >
-                <span>J{num}</span>
-              </button>
+              <div key={paneId} className="relative flex items-center shrink-0">
+                <button
+                  type="button"
+                  onClick={() => onSelectPane(paneId)}
+                  aria-label={`Conta ${num}`}
+                  className={`min-w-[46px] h-[42px] px-2.5 flex items-center justify-center gap-1 rounded-[3px] text-xs font-mono font-bold transition-all cursor-pointer ${
+                    isActive
+                      ? 'bg-[#3B82F6] text-[#090A0C] shadow-lg shadow-[#3B82F6]/25 ring-1 ring-[#3B82F6]'
+                      : 'bg-[#111317] text-[#9CA3AF] border border-[#232832] active:bg-[#181B21]'
+                  }`}
+                >
+                  <span>J{num}</span>
+                </button>
+                {paneIds.length > 1 && onClosePane && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onClosePane(paneId);
+                    }}
+                    title={`Fechar Janela J${num}`}
+                    aria-label={`Fechar Janela J${num}`}
+                    className="absolute -top-1.5 -right-1.5 w-[18px] h-[18px] bg-[#EF4444] text-white rounded-full flex items-center justify-center text-[10px] font-bold shadow-md cursor-pointer active:scale-90"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
             );
           })}
 

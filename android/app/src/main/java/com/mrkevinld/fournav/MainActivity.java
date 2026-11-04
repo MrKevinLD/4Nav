@@ -118,6 +118,13 @@ public class MainActivity extends BridgeActivity {
             settings.setMediaPlaybackRequiresUserGesture(false);
             settings.setSafeBrowsingEnabled(false);
             settings.setTextZoom(100);
+
+            // Chrome standard viewport, hardware acceleration and caching behavior
+            settings.setUseWideViewPort(true);
+            settings.setLoadWithOverviewMode(true);
+            settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+            settings.setDatabaseEnabled(true);
+            settings.setDomStorageEnabled(true);
             
             // Use real Android Chrome User-Agent without '; wv' so Google and websites treat it as a standard Chrome browser
             try {
@@ -130,9 +137,6 @@ public class MainActivity extends BridgeActivity {
 
             // Register native bridge for performance and screen wake lock
             webView.addJavascriptInterface(new AndroidBridgeInterface(), "AndroidBridge");
-
-            // Flush out previous error caches
-            webView.clearCache(true);
 
             CookieManager cookieManager = CookieManager.getInstance();
             cookieManager.setAcceptCookie(true);
@@ -388,48 +392,6 @@ public class MainActivity extends BridgeActivity {
                 }
             }
 
-            byte[] bodyBytes = body != null ? body.bytes() : new byte[0];
-
-            // Only sanitize HTML documents: remove meta frame-busting tags and add base href for relative assets
-            // NEVER inject scripts or mutate website code/DOM directly
-            if (mimeType.toLowerCase(Locale.ROOT).contains("html") && bodyBytes.length > 0) {
-                try {
-                    String charsetName = encoding != null && !encoding.isEmpty() ? encoding : "UTF-8";
-                    String html = new String(bodyBytes, charsetName);
-
-                    // Expunge any meta http-equiv="X-Frame-Options" or CSP
-                    html = html.replaceAll("(?i)<meta[^>]*http-equiv=[\"']?x-frame-options[\"']?[^>]*>", "");
-                    html = html.replaceAll("(?i)<meta[^>]*http-equiv=[\"']?content-security-policy[\"']?[^>]*>", "");
-
-                    // Expunge service worker registration script inside the iframe so it never bypasses the client
-                    html = html.replaceAll("(?i)<script[^>]*registrar-sw[^>]*></script>", "");
-
-                    // Clean baseHref to never contain query parameters (e.g. ?app=ONLINE) or hash fragments
-                    String cleanUrl = urlStr;
-                    int qIdx = cleanUrl.indexOf('?');
-                    if (qIdx >= 0) {
-                        cleanUrl = cleanUrl.substring(0, qIdx);
-                    }
-                    int hIdx = cleanUrl.indexOf('#');
-                    if (hIdx >= 0) {
-                        cleanUrl = cleanUrl.substring(0, hIdx);
-                    }
-                    String baseHref = cleanUrl.endsWith("/") ? cleanUrl : cleanUrl + "/";
-
-                    String baseTag = "<head><base href=\"" + baseHref + "\">";
-                    if (html.contains("<head>")) {
-                        html = html.replaceFirst("(?i)<head>", baseTag);
-                    } else if (html.contains("<html>")) {
-                        html = html.replaceFirst("(?i)<html>", "<html>" + baseTag + "</head>");
-                    }
-
-                    bodyBytes = html.getBytes(StandardCharsets.UTF_8);
-                    encoding = "utf-8";
-                } catch (Exception e) {
-                    logMessage("HTML sanitization error: " + e.getMessage());
-                }
-            }
-
             // Build sanitized response headers: NO X-Frame-Options, NO Content-Security-Policy, NO CORP
             Map<String, String> responseHeaders = new HashMap<>();
             Headers okHeaders = response.headers();
@@ -450,9 +412,8 @@ public class MainActivity extends BridgeActivity {
             responseHeaders.put("Access-Control-Allow-Headers", "*");
             responseHeaders.put("Access-Control-Allow-Credentials", "true");
             responseHeaders.put("Cross-Origin-Resource-Policy", "cross-origin");
-            responseHeaders.put("Cache-Control", "no-cache, no-store, must-revalidate");
 
-            logMessage("OkHttp unblocked frame: " + urlStr + " (code: " + response.code() + ", bytes: " + bodyBytes.length + ")");
+            logMessage("OkHttp unblocked frame: " + urlStr + " (code: " + response.code() + ")");
 
             return new WebResourceResponse(
                     mimeType,
@@ -460,7 +421,7 @@ public class MainActivity extends BridgeActivity {
                     response.code(),
                     response.message().isEmpty() ? "OK" : response.message(),
                     responseHeaders,
-                    new ByteArrayInputStream(bodyBytes)
+                    body != null ? body.byteStream() : new ByteArrayInputStream(new byte[0])
             );
         } catch (Exception ex) {
             logMessage("OkHttp error for " + urlStr + ": " + ex.getClass().getSimpleName() + " - " + ex.getMessage());

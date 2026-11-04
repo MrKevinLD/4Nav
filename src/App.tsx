@@ -170,31 +170,44 @@ export const App: React.FC = () => {
           onTouchEnd={handleEdgeTouchEnd}
           className="fixed top-0 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1 px-2.5 py-1 bg-[#090A0C]/90 hover:bg-[#111317] border-b border-x border-[#3B82F6]/50 rounded-b-md shadow-2xl backdrop-blur select-none transition-all"
         >
-          {/* Quick Maximizers for Each Window */}
+          {/* Quick Maximizers and Closers for Each Window */}
           {currentPaneIds.length > 1 && (
-            <div className="flex items-center gap-1 pr-1.5 border-r border-[#232832]">
+            <div className="flex items-center gap-1.5 pr-1.5 border-r border-[#232832]">
               {currentPaneIds.map((paneId, idx) => {
                 const paneNum = idx + 1;
                 const isMax = currentTab.maximizedPane === paneId;
                 return (
-                  <button
-                    key={paneId}
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleMaximizePane(currentTab.id, paneId);
-                    }}
-                    title={isMax ? `Restaurar Janela ${paneNum} (Divisão)` : `Maximizar Janela ${paneNum}`}
-                    aria-label={`Maximizar Janela ${paneNum}`}
-                    className={`px-2 py-0.5 text-[10px] font-mono font-bold rounded-[2px] transition-all cursor-pointer flex items-center gap-1 ${
-                      isMax
-                        ? 'bg-[#3B82F6] text-[#090A0C] shadow-sm'
-                        : 'bg-[#181B21] text-[#9CA3AF] hover:text-[#F3F4F6] hover:bg-[#232832] border border-[#232832]'
-                    }`}
-                  >
-                    <span>J{paneNum}</span>
-                    {isMax && <span className="text-[9px]">⛶</span>}
-                  </button>
+                  <div key={paneId} className="flex items-center gap-0.5">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleMaximizePane(currentTab.id, paneId);
+                      }}
+                      title={isMax ? `Restaurar Janela ${paneNum} (Dividir Tela)` : `Maximizar Janela ${paneNum}`}
+                      aria-label={`Maximizar Janela ${paneNum}`}
+                      className={`px-2 py-0.5 text-[10px] font-mono font-bold rounded-[2px] transition-all cursor-pointer flex items-center gap-1 ${
+                        isMax
+                          ? 'bg-[#3B82F6] text-[#090A0C] shadow-sm'
+                          : 'bg-[#181B21] text-[#9CA3AF] hover:text-[#F3F4F6] hover:bg-[#232832] border border-[#232832]'
+                      }`}
+                    >
+                      <span>J{paneNum}</span>
+                      {isMax && <span className="text-[9px]">⛶</span>}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removePane(currentTab.id, paneId);
+                      }}
+                      title={`Fechar Janela J${paneNum}`}
+                      aria-label={`Fechar Janela J${paneNum}`}
+                      className="px-1 py-0.5 text-[10px] font-bold text-[#9CA3AF] hover:text-[#EF4444] bg-[#181B21] border border-[#232832] rounded-[2px] cursor-pointer"
+                    >
+                      ×
+                    </button>
+                  </div>
                 );
               })}
 
@@ -206,7 +219,7 @@ export const App: React.FC = () => {
                     e.stopPropagation();
                     toggleMaximizePane(currentTab.id, currentTab.maximizedPane!);
                   }}
-                  title="Restaurar divisão de janelas"
+                  title="Restaurar divisão de tela (Ambas as janelas lado a lado / simultâneas)"
                   aria-label="Restaurar divisão"
                   className="px-2 py-0.5 bg-[#181B21] hover:bg-[#EAB308]/15 text-[#EAB308] border border-[#EAB308]/40 rounded-[2px] text-[10px] font-mono font-bold transition-all cursor-pointer"
                 >
@@ -319,11 +332,14 @@ export const App: React.FC = () => {
           onToggleImmersiveMode={() => setIsImmersiveMode(true)}
           onSelectPane={(paneId) => {
             setActivePane(currentTab.id, paneId);
-            if (!isDualSplit) {
-              toggleMaximizePane(currentTab.id, paneId);
-            }
           }}
-          onAddPane={() => addPane(currentTab.id, settings.defaultNewPaneUrl)}
+          onClosePane={(paneId) => removePane(currentTab.id, paneId)}
+          onAddPane={() => {
+            if (currentTab.maximizedPane) {
+              toggleMaximizePane(currentTab.id, currentTab.maximizedPane);
+            }
+            addPane(currentTab.id, settings.defaultNewPaneUrl);
+          }}
           onToggleDualSplit={() => {
             setIsDualSplit((prev) => !prev);
             if (currentTab.maximizedPane) {
