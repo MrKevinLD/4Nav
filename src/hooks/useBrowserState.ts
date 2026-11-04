@@ -48,7 +48,7 @@ export function createBrowserTab(
   const tabId = generateUniqueId('tab');
   const sessionId = generateUniqueId(`session-${sessionNumber}`);
 
-  let paneUrls: string[] = ['https://play.roclassicidle.com.br/?app=ONLINE'];
+  let paneUrls: string[] = ['https://play.roclassicidle.com.br/'];
   if (Array.isArray(initialUrls) && initialUrls.length > 0) {
     paneUrls = initialUrls;
   } else if (initialUrls && typeof initialUrls === 'object') {
@@ -90,7 +90,7 @@ function getDefaultTabs(): BrowserTab[] {
   return [
     createBrowserTab(
       1,
-      ['https://play.roclassicidle.com.br/?app=ONLINE'],
+      ['https://play.roclassicidle.com.br/'],
       'Navegador #1'
     ),
   ];
