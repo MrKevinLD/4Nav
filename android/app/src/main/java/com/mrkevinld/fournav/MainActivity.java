@@ -44,10 +44,26 @@ public class MainActivity extends BridgeActivity {
     private static String appUserAgent;
     private FourNavWebViewClient customWebViewClient;
 
+    private static final String STANDALONE_SHIM_SCRIPT =
+            "<script>" +
+            "(function() {" +
+            "  try {" +
+            "    Object.defineProperty(window, 'top', { get: function() { return window; }, configurable: false, enumerable: true });" +
+            "    Object.defineProperty(window, 'parent', { get: function() { return window; }, configurable: false, enumerable: true });" +
+            "    Object.defineProperty(window, 'frameElement', { get: function() { return null; }, configurable: false, enumerable: true });" +
+            "  } catch(e) {}" +
+            "})();" +
+            "</script>";
+
     private static final String GHOST_CLEANER_SCRIPT =
             "(function() {" +
             "  if (window.__4navGhostCleaner) return;" +
             "  window.__4navGhostCleaner = true;" +
+            "  try {" +
+            "    Object.defineProperty(window, 'top', { get: function() { return window; }, configurable: false, enumerable: true });" +
+            "    Object.defineProperty(window, 'parent', { get: function() { return window; }, configurable: false, enumerable: true });" +
+            "    Object.defineProperty(window, 'frameElement', { get: function() { return null; }, configurable: false, enumerable: true });" +
+            "  } catch(e) {}" +
             "  function isCloseLike(el) {" +
             "    if (!el) return false;" +
             "    var text = (el.innerText || el.textContent || '').trim().toLowerCase();" +
@@ -88,19 +104,19 @@ public class MainActivity extends BridgeActivity {
             "              modal.style.setProperty('display', 'none', 'important');" +
             "              modal.style.setProperty('pointer-events', 'none', 'important');" +
             "              modal.classList.remove('ri-aberta');" +
-            "              if (modal.id === 'Escape' || modal.classList.contains('popup') || modal.classList.contains('overlay')) {" +
+            "              if (modal.id === 'Escape' || modal.classList.contains('popup') || modal.classList.contains('overlay') || modal.classList.contains('wl-window')) {" +
             "                modal.remove();" +
             "              }" +
             "            }" +
             "          }" +
             "        } catch (err) {}" +
-            "      }, 180);" +
+            "      }, 150);" +
             "    }" +
             "  }" +
             "  document.addEventListener('click', checkAndDismissGhost, true);" +
             "  document.addEventListener('touchend', checkAndDismissGhost, true);" +
             "  window.__sweepAllGhostElements = function() {" +
-            "    var selectors = ['#Escape', '#WinPopup', '#WinMSG', '#WinError', '.modal.fade:not(.show)', '.modal-backdrop', '.overlay[style*=\"opacity: 0\"]'];" +
+            "    var selectors = ['#Escape', '#WinPopup', '#WinMSG', '#WinError', '.modal.fade:not(.show)', '.modal-backdrop', '.overlay[style*=\"opacity: 0\"]', '.wl-window'];" +
             "    selectors.forEach(function(sel) {" +
             "      try {" +
             "        document.querySelectorAll(sel).forEach(function(el) {" +
@@ -110,6 +126,17 @@ public class MainActivity extends BridgeActivity {
             "      } catch (e) {}" +
             "    });" +
             "  };" +
+            "  setInterval(function() {" +
+            "    try {" +
+            "      var inGame = document.querySelector('.Auto, [class*=\"Auto\"], [class*=\"auto\"], .ri-hud, #ro-shop-btn, [title*=\"Mochila\"], [title*=\"Skills\"]');" +
+            "      var loginModal = document.querySelector('#WinLogin, .wl-window');" +
+            "      if (inGame && loginModal) {" +
+            "        loginModal.style.setProperty('display', 'none', 'important');" +
+            "        loginModal.style.setProperty('pointer-events', 'none', 'important');" +
+            "        if (loginModal.parentNode) loginModal.parentNode.removeChild(loginModal);" +
+            "      }" +
+            "    } catch (e) {}" +
+            "  }, 800);" +
             "})();";
 
     public void injectGhostPopupCleaner(WebView webView) {
@@ -650,6 +677,31 @@ public class MainActivity extends BridgeActivity {
             if (body != null) {
                 if (mimeType.toLowerCase(Locale.ROOT).contains("html")) {
                     String html = body.string();
+
+                    // Inject standalone Chrome top-level window emulation at the top of <head>
+                    int headIndex = html.toLowerCase(Locale.ROOT).indexOf("<head");
+                    if (headIndex != -1) {
+                        int closeHead = html.indexOf(">", headIndex);
+                        if (closeHead != -1) {
+                            html = html.substring(0, closeHead + 1) + STANDALONE_SHIM_SCRIPT + html.substring(closeHead + 1);
+                        } else {
+                            html = STANDALONE_SHIM_SCRIPT + html;
+                        }
+                    } else {
+                        int htmlIndex = html.toLowerCase(Locale.ROOT).indexOf("<html");
+                        if (htmlIndex != -1) {
+                            int tagClose = html.indexOf(">", htmlIndex);
+                            if (tagClose != -1) {
+                                html = html.substring(0, tagClose + 1) + STANDALONE_SHIM_SCRIPT + html.substring(tagClose + 1);
+                            } else {
+                                html = STANDALONE_SHIM_SCRIPT + html;
+                            }
+                        } else {
+                            html = STANDALONE_SHIM_SCRIPT + html;
+                        }
+                    }
+
+                    // Inject ghost cleaner script before </body>
                     String scriptTag = "<script>" + GHOST_CLEANER_SCRIPT + "</script>";
                     if (html.contains("</body>")) {
                         html = html.replace("</body>", scriptTag + "</body>");
